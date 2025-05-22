@@ -22,11 +22,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose
+  DialogClose,
+  DialogTrigger // Added DialogTrigger
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { initialSegmentsMock, type Segment } from '@/lib/segment-data'; // Updated import
+import { initialSegmentsMock, type Segment } from '@/lib/segment-data'; 
 
 interface AiSegmentSuggestion {
   id: string;
