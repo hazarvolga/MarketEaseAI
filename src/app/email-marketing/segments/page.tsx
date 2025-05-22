@@ -63,18 +63,18 @@ export default function SegmentsPage() {
 
   const handleCreateSegmentFromSuggestion = (suggestion: AiSegmentSuggestion) => {
     const newSegment: Segment = {
-      id: `seg-${Date.now()}-${Math.random().toString(36).substring(7)}`, // More unique ID
+      id: `seg-${Date.now()}-${Math.random().toString(36).substring(7)}`,
       name: suggestion.name,
       criteria: suggestion.criteriaExample,
-      contactsCount: Math.floor(Math.random() * 300) + 20, // Random count for demo
+      contactsCount: 0, // Initial contact count set to 0
       creationDate: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD format
     };
 
-    setSegments(prevSegments => [newSegment, ...prevSegments]); // Add to the beginning of the list
+    setSegments(prevSegments => [newSegment, ...prevSegments]);
 
     toast({
       title: "Segment Created (Simulation)",
-      description: `Segment "${suggestion.name}" created from AI suggestion and added to the list.`,
+      description: `Segment "${suggestion.name}" created from AI suggestion and added to the list. Contact count will update based on criteria.`,
     });
     setIsAiSuggestModalOpen(false);
   };
@@ -204,5 +204,3 @@ export default function SegmentsPage() {
     </MainLayout>
   );
 }
-
-    
