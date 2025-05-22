@@ -60,10 +60,22 @@ import {
   Filter,
   UploadCloud,
   HardDrive,
-  Database, // Added for Storage Settings
-  Cloud,    // Added for OneDrive
-  BoxIcon as Box,     // Added for Box
-  Server,   // Added for Backblaze B2
+  Database, 
+  Cloud,    
+  BoxIcon as Box,     
+  Server,
+  KeyRound,
+  FileCog,
+  UsersRound,
+  Palette,
+  Languages,
+  MonitorPlay,
+  FileQuestion,
+  HelpingHand,
+  Landmark,
+  GanttChartSquare,
+  ServerCog,
+  Smartphone,
 } from 'lucide-react';
 import {
   Dialog,
@@ -86,6 +98,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 interface CustomIconProps extends React.SVGProps<SVGSVGElement> {}
@@ -128,17 +141,26 @@ const PinterestIconSVG = (props: CustomIconProps) => (
 
 
 type AiProvider = "gemini" | "openrouter";
-type EmailServiceProvider =
-  | "generic_smtp"
-  | "gmail"
-  | "outlook"
-  | "ses"
-  | "mailgun"
-  | "sendgrid"
-  | "postmark"
-  | "brevo"
-  | "mailjet"
-  | "zoho_mail";
+
+interface EmailServiceProvider {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+}
+
+const emailServiceProviders: EmailServiceProvider[] = [
+  { id: "generic_smtp", name: "Generic SMTP Server", icon: <ServerCog className="h-5 w-5 text-muted-foreground" /> },
+  { id: "gmail", name: "Gmail / Google Workspace", icon: <Mail className="h-5 w-5 text-red-500" /> },
+  { id: "outlook", name: "Microsoft Outlook / Office 365", icon: <Mail className="h-5 w-5 text-blue-500" /> },
+  { id: "ses", name: "Amazon SES", icon: <Database className="h-5 w-5 text-orange-500" /> },
+  { id: "mailgun", name: "Mailgun", icon: <SendIcon className="h-5 w-5 text-red-600" /> },
+  { id: "sendgrid", name: "SendGrid", icon: <SendIcon className="h-5 w-5 text-sky-500" /> },
+  { id: "postmark", name: "Postmark", icon: <Mailbox className="h-5 w-5 text-black" /> },
+  { id: "brevo", name: "Brevo (Sendinblue)", icon: <SendIcon className="h-5 w-5 text-teal-500" /> },
+  { id: "mailjet", name: "Mailjet", icon: <SendIcon className="h-5 w-5 text-yellow-500" /> },
+  { id: "zoho_mail", name: "Zoho Mail", icon: <Mail className="h-5 w-5 text-orange-600" /> },
+];
+
 
 interface AvailableSocialPlatform {
   id: string;
@@ -157,13 +179,9 @@ const availableSocialPlatforms: AvailableSocialPlatform[] = [
   { id: 'youtube', name: 'YouTube', icon: <Youtube className="h-5 w-5 text-red-500" />, oauthPermissionsExample: ['youtube.readonly', 'youtube.upload'] },
 ];
 
-interface ConfiguredSocialChannel {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
+interface ConfiguredSocialChannel extends AvailableSocialPlatform {
   status: 'Connected' | 'Disconnected' | 'Needs Re-auth';
   accountIdentifier?: string;
-  oauthPermissionsExample?: string[];
 }
 
 const awsRegions = [
@@ -181,7 +199,7 @@ interface StorageProviderConfigField {
   label: string;
   type: 'text' | 'password' | 'select';
   placeholder?: string;
-  options?: string[]; // For select type
+  options?: string[]; 
 }
 interface StorageProviderOption {
   id: string;
@@ -225,7 +243,7 @@ const availableStorageProviders: StorageProviderOption[] = [
   {
     id: "google_drive",
     name: "Google Drive",
-    icon: <Database className="h-4 w-4 text-green-500" />, // Using Database as a generic icon, consider specific one if available
+    icon: <Smartphone className="h-4 w-4 text-green-500" />, 
     configFields: [
       { id: "clientId", label: "Google Client ID", type: "text", placeholder: "Your Google Client ID" },
       { id: "clientSecret", label: "Google Client Secret", type: "password", placeholder: "Your Google Client Secret" },
@@ -245,14 +263,14 @@ const availableStorageProviders: StorageProviderOption[] = [
   {
     id: "dropbox",
     name: "Dropbox",
-    icon: <Database className="h-4 w-4 text-blue-500" />, // Generic icon
+    icon: <Box className="h-4 w-4 text-blue-500" />, 
     configFields: [
       { id: "appKey", label: "Dropbox App Key", type: "text", placeholder: "Your Dropbox App Key" },
       { id: "appSecret", label: "Dropbox App Secret", type: "password", placeholder: "Your Dropbox App Secret" },
     ],
   },
   {
-    id: "box",
+    id: "box_storage", // Renamed to avoid conflict with lucide-react's Box
     name: "Box",
     icon: <Box className="h-4 w-4 text-blue-700" />,
     configFields: [
@@ -289,24 +307,23 @@ export default function SystemConfigurationPage() {
   const [openRouterApiKey, setOpenRouterApiKey] = React.useState("");
   const [openRouterModelName, setOpenRouterModelName] = React.useState("");
   const [systemPassword, setSystemPassword] = React.useState("");
-
   const [isAiConfigModalOpen, setIsAiConfigModalOpen] = React.useState(false);
 
-  const [selectedEmailService, setSelectedEmailService] = React.useState<EmailServiceProvider>("generic_smtp");
+  const [selectedEmailService, setSelectedEmailService] = React.useState<string>(emailServiceProviders[0].id);
   const [smtpHost, setSmtpHost] = React.useState("");
   const [smtpPort, setSmtpPort] = React.useState("");
   const [smtpUser, setSmtpUser] = React.useState("");
   const [smtpPassword, setSmtpPassword] = React.useState("");
   const [smtpEncryption, setSmtpEncryption] = React.useState("tls");
   const [apiKey, setApiKey] = React.useState("");
-  // const [apiSecret, setApiSecret] = React.useState(""); // Combined apiSecret for Mailgun, SendGrid, etc.
+  const [apiSecret, setApiSecret] = React.useState("");
   const [sesAccessKey, setSesAccessKey] = React.useState("");
   const [sesSecretKey, setSesSecretKey] = React.useState("");
   const [sesRegion, setSesRegion] = React.useState("us-east-1");
   const [sesVerifiedIdentity, setSesVerifiedIdentity] = React.useState("");
-  const [sendingDomain, setSendingDomain] = React.useState(""); // For providers like Mailgun, SendGrid
+  const [sendingDomain, setSendingDomain] = React.useState("");
 
-  const [configuredChannels, setConfiguredChannels] = React.useState<ConfiguredSocialChannel[]>([]);
+  const [configuredDashboardChannels, setConfiguredDashboardChannels] = React.useState<ConfiguredSocialChannel[]>([]);
   const [openPlatformCombobox, setOpenPlatformCombobox] = React.useState(false);
   const [platformSearchValue, setPlatformSearchValue] = React.useState("");
   const [expandedChannelId, setExpandedChannelId] = React.useState<string | null>(null);
@@ -320,129 +337,115 @@ export default function SystemConfigurationPage() {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    let initialChannels: ConfiguredSocialChannel[] = [];
     if (typeof window !== 'undefined') {
-        const storedChannels = localStorage.getItem('marketMaestroConfiguredChannels');
-        if (storedChannels) {
-            try {
-                const parsedData = JSON.parse(storedChannels);
-                if (Array.isArray(parsedData) && parsedData.every(ch => typeof ch.id === 'string' && typeof ch.name === 'string' && typeof ch.status === 'string')) {
-                    initialChannels = parsedData.map((ch: Omit<ConfiguredSocialChannel, 'icon' | 'oauthPermissionsExample'>) => {
-                        const basePlatform = availableSocialPlatforms.find(p => p.id === ch.id);
-                        return { 
-                            ...ch, 
-                            icon: basePlatform?.icon || <Share2Icon className="h-5 w-5 text-muted-foreground"/>, 
-                            oauthPermissionsExample: basePlatform?.oauthPermissionsExample 
-                        };
-                    });
-                } else {
-                    throw new Error("Invalid channel data structure in localStorage");
-                }
-            } catch (e) {
-                console.error("Failed to parse configured channels from localStorage", e);
-                 initialChannels = []; 
-            }
+      const stored = localStorage.getItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as Omit<ConfiguredSocialChannel, 'icon' | 'oauthPermissionsExample'>[];
+          const hydratedChannels = parsed.map(channelData => {
+            const basePlatform = availableSocialPlatforms.find(p => p.id === channelData.id);
+            return {
+              ...channelData,
+              icon: basePlatform?.icon || <Share2Icon className="h-5 w-5 text-muted-foreground" />,
+              oauthPermissionsExample: basePlatform?.oauthPermissionsExample,
+            };
+          });
+          setConfiguredDashboardChannels(hydratedChannels);
+        } catch (e) {
+          console.error("Failed to parse configured channels from localStorage", e);
+          setConfiguredDashboardChannels([]); 
         }
+      }
     }
-    setConfiguredChannels(initialChannels);
   }, []);
   
   const handleAddPlatformToConfiguredList = (platform: AvailableSocialPlatform) => {
-    if (!configuredChannels.find(p => p.id === platform.id)) {
+    if (!configuredDashboardChannels.find(p => p.id === platform.id)) {
       const newChannel: ConfiguredSocialChannel = { ...platform, status: 'Disconnected', accountIdentifier: undefined };
-      const updatedChannels = [...configuredChannels, newChannel];
-      setConfiguredChannels(updatedChannels);
-      saveConfiguredChannelsToLocalStorage(updatedChannels); // Save immediately after adding
+      setConfiguredDashboardChannels(prev => [...prev, newChannel]);
       setExpandedChannelId(platform.id); 
-      toast({ title: `${platform.name} added to configuration. Click 'Connect' below.`});
+      toast({ title: `${platform.name} added. Click 'Connect' or 'Save Preferences'.`});
     } else {
-      toast({ title: `${platform.name} is already in your configuration list.`, variant: "default"});
+      toast({ title: `${platform.name} is already in your list.`, variant: "default"});
     }
     setPlatformSearchValue("");
     setOpenPlatformCombobox(false);
   };
   
-  const saveConfiguredChannelsToLocalStorage = (channels: ConfiguredSocialChannel[]) => {
-    if (typeof window !== 'undefined') {
-        const serializableChannels = channels.map(({icon, oauthPermissionsExample, ...rest}) => rest); 
-        localStorage.setItem('marketMaestroConfiguredChannels', JSON.stringify(serializableChannels));
-    }
-  };
-
   const handleRemoveChannelFromConfiguration = (platformId: string) => {
-    const updatedChannels = configuredChannels.filter(p => p.id !== platformId);
-    setConfiguredChannels(updatedChannels);
-    saveConfiguredChannelsToLocalStorage(updatedChannels); // Save immediately after removing
+    setConfiguredDashboardChannels(prev => prev.filter(p => p.id !== platformId));
     if (expandedChannelId === platformId) {
       setExpandedChannelId(null);
     }
     toast({ title: "Platform removed from configuration list."});
   };
 
- const performConnectionAction = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
+  const performConnectionAction = React.useCallback((channelId: string, action: 'Connect' | 'Disconnect' | 'Re-authenticate') => {
     let toastTitle = "";
     let toastDescription = "";
     let newStatus: ConfiguredSocialChannel['status'] = 'Disconnected';
     let newAccountIdentifier: string | undefined = undefined;
 
-    const channelToUpdate = configuredChannels.find(c => c.id === channelId);
+    const channelToUpdate = configuredDashboardChannels.find(c => c.id === channelId);
     if (!channelToUpdate) return;
     
-    if (currentStatus === 'Disconnected' || currentStatus === 'Needs Re-auth') {
-        toastTitle = `${currentStatus === 'Disconnected' ? 'Connecting' : 'Re-authenticating'} ${channelToUpdate.name}... (Simulation)`;
+    switch(action) {
+      case 'Connect':
+        toastTitle = `Connecting ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "OAuth flow would happen here. Simulating successful connection.";
         newStatus = 'Connected';
         newAccountIdentifier = `${channelToUpdate.name} User (Mock)`;
-    } else if (currentStatus === 'Connected') { // This case is for the 'Disconnect' button
+        break;
+      case 'Disconnect':
         toastTitle = `Disconnecting ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "Simulating successful disconnection.";
         newStatus = 'Disconnected';
         newAccountIdentifier = undefined;
-    } else {
-        return; 
+        break;
+      case 'Re-authenticate':
+        toastTitle = `Re-authenticating ${channelToUpdate.name}... (Simulation)`;
+        toastDescription = "OAuth flow would happen here. Simulating successful re-authentication.";
+        newStatus = 'Connected';
+        newAccountIdentifier = channelToUpdate.accountIdentifier || `${channelToUpdate.name} User (Mock)`;
+        break;
+      default:
+        return;
     }
     
     setTimeout(() => {
-        const updatedChannels = configuredChannels.map(channel => {
+      const updatedChannels = configuredDashboardChannels.map(channel => {
         if (channel.id === channelId) {
-            return { ...channel, status: newStatus, accountIdentifier: newAccountIdentifier };
+          return { ...channel, status: newStatus, accountIdentifier: newAccountIdentifier };
         }
         return channel;
-        });
-        setConfiguredChannels(updatedChannels);
-        saveConfiguredChannelsToLocalStorage(updatedChannels); // Save after status change
-        setExpandedChannelId(null); 
-        setTimeout(() => { // Defer toast to avoid state update during render
-             toast({ title: toastTitle.replace('...', 'Success!'), description: toastDescription.replace('...', 'successful.') });
-        }, 0);
-    }, 1000);
-  }, [configuredChannels, toast]);
-
+      });
+      setConfiguredDashboardChannels(updatedChannels);
+      setExpandedChannelId(null); 
+      setTimeout(() => { 
+        toast({ title: toastTitle.replace('...', 'Success!'), description: toastDescription.replace('...', 'successful.') });
+      }, 0);
+    }, 500); // Short delay for simulation
+  }, [configuredDashboardChannels, toast]);
 
   const handleToggleManageSection = (channelId: string) => {
     setExpandedChannelId(prevId => (prevId === channelId ? null : channelId));
   };
 
-
   const handleSaveDashboardPreferences = () => {
-    const dashboardChannelIds = configuredChannels
-      .filter(c => c.status === 'Connected') // Only save connected ones for dashboard display logic
-      .map(c => c.id); 
-    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(dashboardChannelIds));
+    // Save the current state of configuredDashboardChannels (including status and identifier)
+    // The dashboard page will then filter these to show only 'Connected' ones.
+    const serializableChannels = configuredDashboardChannels.map(({icon, oauthPermissionsExample, ...rest}) => rest);
+    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(serializableChannels));
     toast({
-      title: "Dashboard Preferences Saved",
-      description: "Your selections for which channels appear on the Dashboard Overview have been saved.",
+      title: "Dashboard & Connection Preferences Saved",
+      description: "Your social media connection statuses and dashboard visibility preferences have been saved locally.",
       variant: "default",
     });
   };
 
   const handleSaveAiConfiguration = async () => {
     if (systemPassword !== "password123") { 
-      toast({
-        title: "Authentication Failed",
-        description: "Incorrect system admin password.",
-        variant: "destructive",
-      });
+      toast({ title: "Authentication Failed", description: "Incorrect system admin password.", variant: "destructive" });
       return;
     }
     const configData: AiConfigurationInput = {
@@ -453,28 +456,16 @@ export default function SystemConfigurationPage() {
     };
     const result = await handleUpdateAiConfigurationAction(configData);
     if (result.success) {
-      toast({
-        title: "AI Configuration Update Noted",
-        description: (result.message || "Settings noted.") + " Please update your .env file and restart the server manually as instructed.",
-        variant: "default",
-        duration: 10000,
-      });
+      toast({ title: "AI Configuration Update Noted", description: (result.message || "Settings noted.") + " Please update your .env file and restart the server manually as instructed.", variant: "default", duration: 10000 });
     } else {
       let errorDescription = "An unknown error occurred.";
-      if (typeof result.error === 'string') {
-        errorDescription = result.error;
-      } else if (result.error && 'flatten' in result.error) { 
+      if (typeof result.error === 'string') errorDescription = result.error;
+      else if (result.error && 'flatten' in result.error) { 
         const flatError = (result.error as any).flatten();
-        const fieldErrors = Object.entries(flatError.fieldErrors)
-          .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
-          .join('; ');
+        const fieldErrors = Object.entries(flatError.fieldErrors).map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`).join('; ');
         errorDescription = `Validation failed. ${fieldErrors || 'Please check your input.'}`;
       }
-      toast({
-        title: "AI Configuration Update Failed",
-        description: errorDescription,
-        variant: "destructive",
-      });
+      toast({ title: "AI Configuration Update Failed", description: errorDescription, variant: "destructive" });
     }
     setSystemPassword(""); 
     setIsAiConfigModalOpen(false);
@@ -483,32 +474,13 @@ export default function SystemConfigurationPage() {
   const handleSaveSmtpSettings = () => {
     let settingsToLog: any = { serviceProvider: selectedEmailService };
     switch (selectedEmailService) {
-      case "generic_smtp":
-        settingsToLog = { ...settingsToLog, smtpHost, smtpPort, smtpUser, smtpEncryption, smtpPassword: smtpPassword ? '********' : '' };
-        break;
-      case "gmail":
-      case "outlook":
-        settingsToLog = { ...settingsToLog, connectionMethod: "OAuth 2.0 (Simulated)" };
-        break;
-      case "ses":
-        settingsToLog = { ...settingsToLog, sesAccessKey, sesSecretKey: sesSecretKey ? '********' : '', sesRegion, sesVerifiedIdentity };
-        break;
-      case "mailgun":
-      case "sendgrid":
-      case "postmark":
-      case "brevo":
-      case "mailjet":
-      case "zoho_mail":
-        // Assuming 'apiKey' and 'sendingDomain' are relevant for these
-        settingsToLog = { ...settingsToLog, apiKey: apiKey ? '********' : '', sendingDomain };
-        break;
+      case "generic_smtp": settingsToLog = { ...settingsToLog, smtpHost, smtpPort, smtpUser, smtpEncryption, smtpPassword: smtpPassword ? '********' : '' }; break;
+      case "gmail": case "outlook": settingsToLog = { ...settingsToLog, connectionMethod: "OAuth 2.0 (Simulated)" }; break;
+      case "ses": settingsToLog = { ...settingsToLog, sesAccessKey, sesSecretKey: sesSecretKey ? '********' : '', sesRegion, sesVerifiedIdentity }; break;
+      default: settingsToLog = { ...settingsToLog, apiKey: apiKey ? '********' : '', apiSecret: apiSecret ? '********' : '', sendingDomain }; break;
     }
     console.log("SMTP/Email Service Settings to save (simulation):", settingsToLog);
-    toast({
-      title: "Email Service Settings Saved (Simulation)",
-      description: `Configuration for ${selectedEmailService.replace(/_/g, ' ').toUpperCase()} has been noted. In a real app, this would be securely saved to a backend.`,
-      variant: "default",
-    });
+    toast({ title: "Email Service Settings Saved (Simulation)", description: `Configuration for ${emailServiceProviders.find(p=>p.id === selectedEmailService)?.name} has been noted.`, variant: "default" });
   };
 
   const getStatusBadgeVariant = (status: ConfiguredSocialChannel['status']): "default" | "secondary" | "destructive" | "outline" => {
@@ -527,14 +499,45 @@ export default function SystemConfigurationPage() {
       return;
     }
     const provider = availableStorageProviders.find(p => p.id === selectedStorageProviderId);
-    console.log("Saving Storage Configuration (Simulation):");
-    console.log("Provider:", provider?.name);
-    console.log("Config:", storageConfigInputs);
-    toast({
-      title: "Storage Configuration Saved (Simulation)",
-      description: `Settings for ${provider?.name} have been noted.`,
-    });
+    console.log("Saving Storage Configuration (Simulation):", { Provider: provider?.name, Config: storageConfigInputs });
+    toast({ title: "Storage Configuration Saved (Simulation)", description: `Settings for ${provider?.name} have been noted.` });
   };
+  
+  const activeServiceIcons = React.useMemo(() => {
+    const icons: React.ReactNode[] = [];
+    // AI
+    if (selectedProvider && (geminiApiKey || (openRouterApiKey && openRouterModelName))) {
+      icons.push(<Tooltip key="ai-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: {selectedProvider}</p></TooltipContent></Tooltip>);
+    }
+    // SMTP
+    const smtpService = emailServiceProviders.find(p => p.id === selectedEmailService);
+    if (smtpService && (
+        (selectedEmailService === "generic_smtp" && smtpHost && smtpPort && smtpUser) ||
+        (selectedEmailService === "ses" && sesAccessKey && sesSecretKey && sesRegion && sesVerifiedIdentity) ||
+        (["gmail", "outlook"].includes(selectedEmailService) /* Assuming OAuth is "configured" if selected */) ||
+        (!["generic_smtp", "gmail", "outlook", "ses"].includes(selectedEmailService) && apiKey)
+    )) {
+         icons.push(<Tooltip key={`smtp-${smtpService.id}-active`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7">{React.cloneElement(smtpService.icon as React.ReactElement, { className: "h-5 w-5" })}</Button></TooltipTrigger><TooltipContent><p>SMTP: {smtpService.name}</p></TooltipContent></Tooltip>);
+    }
+    // Social Media
+    configuredDashboardChannels.filter(c => c.status === 'Connected').slice(0, 3).forEach(channel => { // Show max 3 social icons
+      icons.push(<Tooltip key={`social-${channel.id}-active`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7">{React.cloneElement(channel.icon as React.ReactElement, { className: "h-5 w-5" })}</Button></TooltipTrigger><TooltipContent><p>Social: {channel.name}</p></TooltipContent></Tooltip>);
+    });
+    if (configuredDashboardChannels.filter(c => c.status === 'Connected').length > 3) {
+        icons.push(<Tooltip key="social-more-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><PlusCircleIcon className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>+ More Social</p></TooltipContent></Tooltip>);
+    }
+    // Storage
+    const storageProvider = availableStorageProviders.find(p => p.id === selectedStorageProviderId);
+    // Simple check: if a provider is selected and at least one of its config fields has a value
+    const isStorageConfigured = selectedStorageProviderId && storageProvider && Object.values(storageConfigInputs).some(val => val.trim() !== "");
+    if (isStorageConfigured && storageProvider?.icon) {
+      icons.push(<Tooltip key={`storage-${storageProvider.id}-active`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7">{React.cloneElement(storageProvider.icon as React.ReactElement, { className: "h-5 w-5" })}</Button></TooltipTrigger><TooltipContent><p>Storage: {storageProvider.name}</p></TooltipContent></Tooltip>);
+    } else if (isStorageConfigured && storageProvider) {
+       icons.push(<Tooltip key={`storage-${storageProvider.id}-active-generic`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><HardDrive className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>Storage: {storageProvider.name}</p></TooltipContent></Tooltip>);
+    }
+
+    return icons;
+  }, [selectedProvider, geminiApiKey, openRouterApiKey, openRouterModelName, selectedEmailService, smtpHost, smtpPort, smtpUser, sesAccessKey, sesSecretKey, sesRegion, sesVerifiedIdentity, apiKey, configuredDashboardChannels, selectedStorageProviderId, storageConfigInputs]);
 
 
   return (
@@ -545,8 +548,29 @@ export default function SystemConfigurationPage() {
           <CardDescription>Manage global settings and configurations for MarketMaestro.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <TooltipProvider>
+            <Card className="mb-6 bg-muted/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-medium flex items-center">
+                  <ServerCog className="mr-2 h-5 w-5 text-muted-foreground" />
+                  Active Integrations Overview
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Quick view of currently configured core services.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-center gap-2 py-3">
+                {activeServiceIcons.length > 0 ? activeServiceIcons.map((icon, index) => (
+                  <React.Fragment key={index}>{icon}</React.Fragment>
+                )) : (
+                  <p className="text-sm text-muted-foreground">No core services configured yet.</p>
+                )}
+              </CardContent>
+            </Card>
+          </TooltipProvider>
+
           <Tabs defaultValue="ai-settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-1 mb-6 h-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-1 mb-6 h-auto">
               <TabsTrigger value="ai-settings" className="py-2 text-xs sm:text-sm"><Cpu className="mr-1 h-4 w-4 hidden sm:inline-block"/>AI Settings</TabsTrigger>
               <TabsTrigger value="smtp-settings" className="py-2 text-xs sm:text-sm"><Mailbox className="mr-1 h-4 w-4 hidden sm:inline-block"/>SMTP Settings</TabsTrigger>
               <TabsTrigger value="email-config" className="py-2 text-xs sm:text-sm"><Mail className="mr-1 h-4 w-4 hidden sm:inline-block"/>Email Config</TabsTrigger>
@@ -593,7 +617,7 @@ export default function SystemConfigurationPage() {
                       <Input
                         id="openRouterApiKey"
                         type="password"
-                        placeholder="Enter your OpenRouter API Key (e.g., sk-or-...) "
+                        placeholder="Enter your OpenRouter API Key (e.g., sk-or-...)"
                         value={openRouterApiKey}
                         onChange={(e) => setOpenRouterApiKey(e.target.value)}
                       />
@@ -634,7 +658,7 @@ export default function SystemConfigurationPage() {
                         </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-3">
-                            <Label htmlFor="systemPassword">System Admin Password</Label>
+                            <Label htmlFor="systemPassword">System Admin Password (mock: password123)</Label>
                             <Input
                                 id="systemPassword"
                                 type="password"
@@ -668,21 +692,19 @@ export default function SystemConfigurationPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="emailServiceProvider">Email Service Provider</Label>
-                  <Select value={selectedEmailService} onValueChange={(value) => setSelectedEmailService(value as EmailServiceProvider)}>
+                  <Select value={selectedEmailService} onValueChange={(value) => setSelectedEmailService(value as string)}>
                     <SelectTrigger id="emailServiceProvider" className="w-full md:w-[300px]">
                       <SelectValue placeholder="Select a service provider" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="generic_smtp">Generic SMTP Server</SelectItem>
-                      <SelectItem value="gmail">Gmail / Google Workspace</SelectItem>
-                      <SelectItem value="outlook">Microsoft Outlook / Office 365</SelectItem>
-                      <SelectItem value="ses">Amazon SES</SelectItem>
-                      <SelectItem value="mailgun">Mailgun</SelectItem>
-                      <SelectItem value="sendgrid">SendGrid</SelectItem>
-                      <SelectItem value="postmark">Postmark</SelectItem>
-                      <SelectItem value="brevo">Brevo (Sendinblue)</SelectItem>
-                      <SelectItem value="mailjet">Mailjet</SelectItem>
-                      <SelectItem value="zoho_mail">Zoho Mail</SelectItem>
+                      {emailServiceProviders.map(provider => (
+                        <SelectItem key={provider.id} value={provider.id}>
+                          <div className="flex items-center gap-2">
+                            {React.cloneElement(provider.icon as React.ReactElement, { className: "h-4 w-4" })}
+                            {provider.name}
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -691,50 +713,22 @@ export default function SystemConfigurationPage() {
                   <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
                     <h4 className="font-medium">Generic SMTP Details</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="smtpHost">SMTP Host</Label>
-                        <Input id="smtpHost" placeholder="e.g., smtp.example.com" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="smtpPort">SMTP Port</Label>
-                        <Input id="smtpPort" type="number" placeholder="e.g., 587 or 465" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} />
-                      </div>
+                      <div className="space-y-1.5"> <Label htmlFor="smtpHost">SMTP Host</Label> <Input id="smtpHost" placeholder="e.g., smtp.example.com" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} /> </div>
+                      <div className="space-y-1.5"> <Label htmlFor="smtpPort">SMTP Port</Label> <Input id="smtpPort" type="number" placeholder="e.g., 587 or 465" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} /> </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="smtpUser">SMTP Username</Label>
-                        <Input id="smtpUser" placeholder="e.g., your_email@example.com" value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="smtpPassword">SMTP Password</Label>
-                        <Input id="smtpPassword" type="password" placeholder="Enter SMTP password" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
-                      </div>
+                      <div className="space-y-1.5"> <Label htmlFor="smtpUser">SMTP Username</Label> <Input id="smtpUser" placeholder="e.g., your_email@example.com" value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} /> </div>
+                      <div className="space-y-1.5"> <Label htmlFor="smtpPassword">SMTP Password</Label> <Input id="smtpPassword" type="password" placeholder="Enter SMTP password" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} /> </div>
                     </div>
-                    <div className="space-y-1.5 md:max-w-[300px]">
-                      <Label htmlFor="smtpEncryption">Encryption</Label>
-                      <Select value={smtpEncryption} onValueChange={setSmtpEncryption}>
-                        <SelectTrigger id="smtpEncryption">
-                          <SelectValue placeholder="Select encryption type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="ssl">SSL/TLS</SelectItem>
-                          <SelectItem value="starttls">STARTTLS</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <div className="space-y-1.5 md:max-w-[300px]"> <Label htmlFor="smtpEncryption">Encryption</Label> <Select value={smtpEncryption} onValueChange={setSmtpEncryption}> <SelectTrigger id="smtpEncryption"> <SelectValue placeholder="Select encryption type" /> </SelectTrigger> <SelectContent> <SelectItem value="none">None</SelectItem> <SelectItem value="ssl">SSL/TLS</SelectItem> <SelectItem value="starttls">STARTTLS</SelectItem> </SelectContent> </Select> </div>
                   </div>
                 )}
 
                 {(selectedEmailService === "gmail" || selectedEmailService === "outlook") && (
                   <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
                     <h4 className="font-medium">Connect via OAuth 2.0 (Recommended)</h4>
-                    <p className="text-sm text-muted-foreground">
-                      For {selectedEmailService === "gmail" ? "Gmail/Google Workspace" : "Microsoft Outlook/Office 365"}, connecting via OAuth is more secure.
-                    </p>
-                    <Button variant="outline" onClick={() => toast({ title: "OAuth Connection (Simulation)", description: `Redirecting to ${selectedEmailService === "gmail" ? "Google" : "Microsoft"} for authorization...` })}>
-                      <Link2IconLucide className="mr-2 h-4 w-4"/> Connect with {selectedEmailService === "gmail" ? "Google" : "Microsoft"}
-                    </Button>
+                    <p className="text-sm text-muted-foreground"> For {emailServiceProviders.find(p=>p.id === selectedEmailService)?.name}, connecting via OAuth is more secure. </p>
+                    <Button variant="outline" onClick={() => toast({ title: "OAuth Connection (Simulation)", description: `Redirecting to ${selectedEmailService === "gmail" ? "Google" : "Microsoft"} for authorization...` })}> <Link2IconLucide className="mr-2 h-4 w-4"/> Connect with {selectedEmailService === "gmail" ? "Google" : "Microsoft"} </Button>
                     <p className="text-sm">Status: <Badge variant="secondary">Not Connected (Simulation)</Badge></p>
                   </div>
                 )}
@@ -742,47 +736,23 @@ export default function SystemConfigurationPage() {
                 {selectedEmailService === "ses" && (
                    <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
                     <h4 className="font-medium">Amazon SES Configuration</h4>
-                    <div className="space-y-1.5">
-                        <Label htmlFor="sesAccessKey">Access Key ID</Label>
-                        <Input id="sesAccessKey" placeholder="Your AWS Access Key ID" value={sesAccessKey} onChange={e => setSesAccessKey(e.target.value)} />
-                    </div>
-                     <div className="space-y-1.5">
-                        <Label htmlFor="sesSecretKey">Secret Access Key</Label>
-                        <Input id="sesSecretKey" type="password" placeholder="Your AWS Secret Access Key" value={sesSecretKey} onChange={e => setSesSecretKey(e.target.value)}/>
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label htmlFor="sesRegion">AWS Region</Label>
-                        <Select value={sesRegion} onValueChange={setSesRegion}>
-                            <SelectTrigger id="sesRegion"> <SelectValue placeholder="Select AWS Region"/> </SelectTrigger>
-                            <SelectContent> {awsRegions.map(region => <SelectItem key={region} value={region}>{region}</SelectItem>)} </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label htmlFor="sesVerifiedIdentity">Verified Sending Email/Domain</Label>
-                        <Input id="sesVerifiedIdentity" placeholder="e.g., noreply@yourdomain.com" value={sesVerifiedIdentity} onChange={e => setSesVerifiedIdentity(e.target.value)}/>
-                         <p className="text-xs text-muted-foreground">Ensure this email/domain is verified in AWS SES.</p>
-                    </div>
+                    <div className="space-y-1.5"> <Label htmlFor="sesAccessKey">Access Key ID</Label> <Input id="sesAccessKey" placeholder="Your AWS Access Key ID" value={sesAccessKey} onChange={e => setSesAccessKey(e.target.value)} /> </div>
+                    <div className="space-y-1.5"> <Label htmlFor="sesSecretKey">Secret Access Key</Label> <Input id="sesSecretKey" type="password" placeholder="Your AWS Secret Access Key" value={sesSecretKey} onChange={e => setSesSecretKey(e.target.value)}/> </div>
+                    <div className="space-y-1.5"> <Label htmlFor="sesRegion">AWS Region</Label> <Select value={sesRegion} onValueChange={setSesRegion}> <SelectTrigger id="sesRegion"> <SelectValue placeholder="Select AWS Region"/> </SelectTrigger> <SelectContent> {awsRegions.map(region => <SelectItem key={region} value={region}>{region}</SelectItem>)} </SelectContent> </Select> </div>
+                    <div className="space-y-1.5"> <Label htmlFor="sesVerifiedIdentity">Verified Sending Email/Domain</Label> <Input id="sesVerifiedIdentity" placeholder="e.g., noreply@yourdomain.com" value={sesVerifiedIdentity} onChange={e => setSesVerifiedIdentity(e.target.value)}/> <p className="text-xs text-muted-foreground">Ensure this email/domain is verified in AWS SES.</p> </div>
                     <Button variant="outline" onClick={() => toast({ title: "Verify SES (Simulation)", description: "Checking SES configuration..."})}>Verify & Save SES Configuration</Button>
                   </div>
                 )}
 
                 {["mailgun", "sendgrid", "postmark", "brevo", "mailjet", "zoho_mail"].includes(selectedEmailService) && (
                   <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
-                    <h4 className="font-medium">Configure with API Key: {selectedEmailService.replace(/_/g, ' ').toUpperCase()}</h4>
-                     <div className="space-y-1.5">
-                        <Label htmlFor="apiKey">API Key</Label>
-                        <Input id="apiKey" type="password" placeholder={`Enter ${selectedEmailService.replace(/_/g, ' ').toUpperCase()} API Key`} value={apiKey} onChange={e => setApiKey(e.target.value)} />
-                    </div>
+                    <h4 className="font-medium">Configure with API Key: {emailServiceProviders.find(p=>p.id === selectedEmailService)?.name}</h4>
+                    <div className="space-y-1.5"> <Label htmlFor="apiKey">API Key</Label> <Input id="apiKey" type="password" placeholder={`Enter ${emailServiceProviders.find(p=>p.id === selectedEmailService)?.name} API Key`} value={apiKey} onChange={e => setApiKey(e.target.value)} /> </div>
+                    <div className="space-y-1.5"> <Label htmlFor="apiSecret">API Secret / Password (Optional)</Label> <Input id="apiSecret" type="password" placeholder="Enter API Secret if required" value={apiSecret} onChange={e => setApiSecret(e.target.value)} /> </div>
                     {(selectedEmailService === "mailgun" || selectedEmailService === "sendgrid" || selectedEmailService === "brevo") &&
-                        <div className="space-y-1.5">
-                            <Label htmlFor="sendingDomain">Sending Domain (Recommended)</Label>
-                            <Input id="sendingDomain" placeholder="e.g., mg.yourdomain.com" value={sendingDomain} onChange={e => setSendingDomain(e.target.value)}/>
-                        </div>
+                        <div className="space-y-1.5"> <Label htmlFor="sendingDomain">Sending Domain (Recommended)</Label> <Input id="sendingDomain" placeholder="e.g., mg.yourdomain.com" value={sendingDomain} onChange={e => setSendingDomain(e.target.value)}/> </div>
                     }
-                     {/* Removed API Secret as it was causing confusion and not universally applicable */}
-                     <p className="text-xs text-muted-foreground">
-                        Refer to your <Link href="#" className="underline hover:text-primary" onClick={(e) => {e.preventDefault(); toast({title:"Documentation", description:"Link to specific provider docs would go here."})}}>{selectedEmailService.replace(/_/g, ' ').toUpperCase()} documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link> for API key details.
-                    </p>
+                    <p className="text-xs text-muted-foreground"> Refer to your <Link href="#" className="underline hover:text-primary" onClick={(e) => {e.preventDefault(); toast({title:"Documentation", description:"Link to specific provider docs would go here."})}}>{emailServiceProviders.find(p=>p.id === selectedEmailService)?.name} documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link> for API key details. </p>
                     <Button variant="outline" onClick={() => toast({ title: `Verify ${selectedEmailService.toUpperCase()} (Simulation)`, description: "Checking API key..."})}>Verify & Save API Key</Button>
                   </div>
                 )}
@@ -792,77 +762,39 @@ export default function SystemConfigurationPage() {
 
             <TabsContent value="email-config">
               <div className="space-y-4 p-4 border rounded-md bg-card">
-                <h3 className="text-lg font-medium mb-2 flex items-center">
-                  <Mail className="mr-2 h-5 w-5 text-primary" />
-                  General Email Settings
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Configure default sender information and global footers.
-                </p>
-                <div className="space-y-2">
-                  <Label htmlFor="defaultFromName">Default Sender Name</Label>
-                  <Input id="defaultFromName" placeholder="Your Brand Name" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="defaultFromEmail">Default Sender Email</Label>
-                  <Input id="defaultFromEmail" type="email" placeholder="noreply@yourbrand.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="globalEmailFooter">Global Email Footer Text/HTML (Optional)</Label>
-                  <Textarea id="globalEmailFooter" rows={3} placeholder="e.g., © 2024 Your Company. All rights reserved. ..." />
-                </div>
-                 <Button onClick={() => toast({title: "Email Settings Saved", description:"General email settings saved (simulation)."})} className="mt-4">Save Email Settings</Button>
+                <h3 className="text-lg font-medium mb-2 flex items-center"> <Mail className="mr-2 h-5 w-5 text-primary" /> General Email Settings </h3>
+                <p className="text-sm text-muted-foreground"> Configure default sender information and global footers. </p>
+                <div className="space-y-2"> <Label htmlFor="defaultFromName">Default Sender Name</Label> <Input id="defaultFromName" placeholder="Your Brand Name" /> </div>
+                <div className="space-y-2"> <Label htmlFor="defaultFromEmail">Default Sender Email</Label> <Input id="defaultFromEmail" type="email" placeholder="noreply@yourbrand.com" /> </div>
+                <div className="space-y-2"> <Label htmlFor="globalEmailFooter">Global Email Footer Text/HTML (Optional)</Label> <Textarea id="globalEmailFooter" rows={3} placeholder="e.g., © 2024 Your Company. All rights reserved. ..." /> </div>
+                <Button onClick={() => toast({title: "Email Settings Saved", description:"General email settings saved (simulation)."})} className="mt-4">Save Email Settings</Button>
               </div>
             </TabsContent>
 
             <TabsContent value="social-accounts">
               <div className="space-y-4 p-4 border rounded-md bg-card">
-                <h3 className="text-lg font-medium mb-2 flex items-center">
-                  <Share2Icon className="h-5 w-5 mr-2 text-primary" />
-                  Social Media Account Connections
-                </h3>
-                <p className="text-sm text-muted-foreground mb-1">
-                  Manage which social media accounts are connected and used for dashboard display.
-                </p>
+                <h3 className="text-lg font-medium mb-2 flex items-center"> <Share2Icon className="h-5 w-5 mr-2 text-primary" /> Social Media Account Connections </h3>
+                <p className="text-sm text-muted-foreground mb-1"> Add platforms your brand uses, manage their connection status, and select which ones appear on the main Dashboard Overview. </p>
+                
                 <div className="space-y-2">
                     <Label htmlFor="platformCombobox">Add Platform to Configuration</Label>
                     <Popover open={openPlatformCombobox} onOpenChange={setOpenPlatformCombobox}>
                       <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          id="platformCombobox"
-                          aria-expanded={openPlatformCombobox}
-                          className="w-full md:w-[300px] justify-between"
-                        >
-                          {availableSocialPlatforms.find(p => p.name.toLowerCase() === platformSearchValue.toLowerCase())?.name
-                            || "Select platform to configure..."}
+                        <Button variant="outline" role="combobox" id="platformCombobox" aria-expanded={openPlatformCombobox} className="w-full md:w-[300px] justify-between">
+                          {platformSearchValue ? availableSocialPlatforms.find(p => p.name.toLowerCase() === platformSearchValue.toLowerCase())?.name : "Select platform to add..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                         <Command>
-                          <CommandInput
-                            placeholder="Search platform..."
-                            value={platformSearchValue}
-                            onValueChange={setPlatformSearchValue}
-                          />
-                          <CommandEmpty>No platform found or already configured.</CommandEmpty>
+                          <CommandInput placeholder="Search platform..." value={platformSearchValue} onValueChange={setPlatformSearchValue}/>
                           <CommandList>
+                            <CommandEmpty>No platform found.</CommandEmpty>
                             <CommandGroup>
-                              {availableSocialPlatforms
-                                .filter(p => !configuredChannels.find(cp => cp.id === p.id) && p.name.toLowerCase().includes(platformSearchValue.toLowerCase()))
+                              {availableSocialPlatforms.filter(p => !configuredDashboardChannels.find(cp => cp.id === p.id) && p.name.toLowerCase().includes(platformSearchValue.toLowerCase()))
                                 .map((platform) => (
-                                <CommandItem
-                                  key={platform.id}
-                                  value={platform.name}
-                                  onSelect={() => {
-                                    handleAddPlatformToConfiguredList(platform);
-                                  }}
-                                  className="flex items-center gap-2 cursor-pointer"
-                                >
-                                  {platform.icon}
-                                  {platform.name}
+                                <CommandItem key={platform.id} value={platform.name} onSelect={() => handleAddPlatformToConfiguredList(platform)} className="flex items-center gap-2 cursor-pointer">
+                                  {platform.icon} {platform.name}
                                 </CommandItem>
                               ))}
                             </CommandGroup>
@@ -872,49 +804,26 @@ export default function SystemConfigurationPage() {
                     </Popover>
                   </div>
 
-                {configuredChannels.length > 0 ? (
+                {configuredDashboardChannels.length > 0 ? (
                   <ScrollArea className="h-auto max-h-[60vh] mt-4 border rounded-md">
                     <div className="p-3 space-y-3">
                       <h4 className="font-medium text-sm text-muted-foreground">Configured Channels:</h4>
-                      {configuredChannels.map((channel) => (
+                      {configuredDashboardChannels.map((channel) => (
                         <div key={channel.id} className="flex flex-col p-3 border rounded-md hover:bg-muted/50 gap-2">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
                                 <div className="flex items-center gap-2 flex-grow">
                                     {channel.icon}
                                     <div className="flex-1">
                                         <span className="font-medium text-sm">{channel.name}</span>
-                                        <p className="text-xs text-muted-foreground break-words">
-                                            {channel.status === 'Connected' ? channel.accountIdentifier || 'Account Connected' : channel.status === 'Needs Re-auth' ? 'Needs Re-authentication' : 'Not Connected'}
-                                        </p>
+                                        <p className="text-xs text-muted-foreground break-words"> {channel.status === 'Connected' ? channel.accountIdentifier || 'Account Connected' : channel.status === 'Needs Re-auth' ? 'Needs Re-authentication' : 'Not Connected'} </p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
-                                    <Badge variant={getStatusBadgeVariant(channel.status)} className="text-xs mr-1">
-                                        {channel.status}
-                                    </Badge>
-                                    {channel.status === 'Disconnected' && (
-                                      <Button variant="default" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Connect</Button>
-                                    )}
-                                    {channel.status === 'Connected' && (
-                                    <>
-                                        <Button variant="ghost" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Manage</Button>
-                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => performConnectionAction(channel.id, 'Connected')}>Disconnect</Button>
-                                    </>
-                                    )}
-                                    {channel.status === 'Needs Re-auth' && (
-                                    <Button
-                                        variant="default"
-                                        size="sm"
-                                        onClick={() => handleToggleManageSection(channel.id)}
-                                        className="bg-muted hover:bg-card border border-accent text-primary-foreground"
-                                    >
-                                        Re-authenticate
-                                    </Button>
-                                    )}
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name} from configuration`}>
-                                      <Trash2 className="h-4 w-4"/>
-                                      <span className="sr-only">Remove {channel.name}</span>
-                                    </Button>
+                                    <Badge variant={getStatusBadgeVariant(channel.status)} className="text-xs"> {channel.status} </Badge>
+                                    {channel.status === 'Disconnected' && (<Button variant="default" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Connect</Button> )}
+                                    {channel.status === 'Connected' && (<> <Button variant="ghost" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Manage</Button> <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => performConnectionAction(channel.id, 'Disconnect')}>Disconnect</Button> </> )}
+                                    {channel.status === 'Needs Re-auth' && (<Button variant="default" size="sm" onClick={() => handleToggleManageSection(channel.id)} className="bg-muted hover:bg-card border border-accent text-primary-foreground">Re-authenticate</Button> )}
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name} from configuration`}> <Trash2 className="h-4 w-4"/> <span className="sr-only">Remove {channel.name}</span> </Button>
                                 </div>
                             </div>
 
@@ -922,102 +831,39 @@ export default function SystemConfigurationPage() {
                             <div className="mt-3 pt-3 border-t border-dashed bg-muted/30 p-3 rounded-b-md animate-in fade-in duration-300">
                                 { (channel.status === 'Disconnected') && (
                                   <>
-                                    <h4 className="text-sm font-semibold mb-2 text-foreground">
-                                        Connect to {channel.name}
-                                    </h4>
+                                    <h4 className="text-sm font-semibold mb-2 text-foreground"> Connect to {channel.name} </h4>
                                     <p className="text-xs text-muted-foreground mb-1">This will simulate an OAuth 2.0 flow. We would request permissions for (example):</p>
-                                    {channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0 && (
-                                      <ul className="list-disc list-inside text-xs text-muted-foreground pl-2 mb-3">
-                                        {channel.oauthPermissionsExample.map(perm => <li key={perm}>{perm}</li>)}
-                                      </ul>
-                                    )}
-                                     <div className="space-y-3 my-3">
-                                        <div>
-                                            <Label htmlFor={`apiKey-${channel.id}`} className="text-xs">API Key (if applicable)</Label>
-                                            <Input id={`apiKey-${channel.id}`} placeholder="Enter API Key (optional)" className="h-8 text-xs mt-0.5"/>
-                                        </div>
-                                        <div>
-                                            <Label htmlFor={`appId-${channel.id}`} className="text-xs">App ID / Client ID (if applicable)</Label>
-                                            <Input id={`appId-${channel.id}`} placeholder="Enter App ID (optional)" className="h-8 text-xs mt-0.5"/>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">Note: Most connections are via OAuth. Enter details above only if specifically required by the platform's alternative connection method.</p>
+                                    {channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0 && ( <ul className="list-disc list-inside text-xs text-muted-foreground pl-2 mb-3"> {channel.oauthPermissionsExample.map(perm => <li key={perm}>{perm}</li>)} </ul> )}
+                                    <div className="space-y-3 my-3">
+                                      <div> <Label htmlFor={`apiKey-${channel.id}`} className="text-xs">API Key (if applicable)</Label> <Input id={`apiKey-${channel.id}`} placeholder="Enter API Key (optional)" className="h-8 text-xs mt-0.5"/> </div>
+                                      <div> <Label htmlFor={`appId-${channel.id}`} className="text-xs">App ID / Client ID (if applicable)</Label> <Input id={`appId-${channel.id}`} placeholder="Enter App ID (optional)" className="h-8 text-xs mt-0.5"/> </div>
+                                      <p className="text-xs text-muted-foreground">Note: Most connections are via OAuth. Enter details above only if specifically required by the platform's alternative connection method.</p>
                                     </div>
-                                    <Button
-                                      variant="default"
-                                      className="w-full"
-                                      onClick={() => performConnectionAction(channel.id, 'Disconnected')}
-                                    >
-                                      <Link2IconLucide className="mr-2 h-4 w-4" />
-                                       Proceed to Connect with {channel.name}
-                                    </Button>
+                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Connect')}> <Link2IconLucide className="mr-2 h-4 w-4" /> Proceed to Connect with {channel.name} </Button>
                                   </>
                                 )}
                                  { (channel.status === 'Needs Re-auth') && (
                                   <>
-                                    <h4 className="text-sm font-semibold mb-2 text-foreground">
-                                       Re-authenticate with {channel.name}
-                                    </h4>
+                                    <h4 className="text-sm font-semibold mb-2 text-foreground"> Re-authenticate with {channel.name} </h4>
                                     <p className="text-xs text-muted-foreground mb-1">Your connection needs to be refreshed. This will simulate an OAuth 2.0 flow.</p>
-                                    {channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0 && (
-                                      <ul className="list-disc list-inside text-xs text-muted-foreground pl-2 mb-3">
-                                        {channel.oauthPermissionsExample.map(perm => <li key={perm}>{perm}</li>)}
-                                      </ul>
-                                    )}
-                                    <Button
-                                      variant="default"
-                                      className="w-full"
-                                      onClick={() => performConnectionAction(channel.id, 'Needs Re-auth')}
-                                    >
-                                      <RefreshCw className="mr-2 h-4 w-4" />
-                                       Proceed to Re-authenticate {channel.name}
-                                    </Button>
+                                    {channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0 && ( <ul className="list-disc list-inside text-xs text-muted-foreground pl-2 mb-3"> {channel.oauthPermissionsExample.map(perm => <li key={perm}>{perm}</li>)} </ul> )}
+                                    <div className="space-y-3 my-3">
+                                      <div> <Label htmlFor={`reauth-apiKey-${channel.id}`} className="text-xs">API Key (if applicable)</Label> <Input id={`reauth-apiKey-${channel.id}`} placeholder="Confirm API Key (optional)" className="h-8 text-xs mt-0.5"/> </div>
+                                    </div>
+                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Re-authenticate')}> <RefreshCw className="mr-2 h-4 w-4" /> Proceed to Re-authenticate {channel.name} </Button>
                                   </>
                                 )}
                                 {channel.status === 'Connected' && (
                                   <>
                                     <h4 className="text-sm font-semibold mb-2 text-foreground">Connection Details for {channel.name}</h4>
                                     <div className="space-y-3 text-xs">
-                                        <div className="space-y-1">
-                                            <Label className="text-xs text-muted-foreground">Connected Account</Label>
-                                            <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words">
-                                                {channel.accountIdentifier || "N/A"}
-                                            </p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs text-muted-foreground">Permissions Granted (Mock)</Label>
-                                            <div className="text-xs bg-background/70 p-2 rounded-md leading-relaxed break-words">
-                                                Standard permissions for posting, reading engagement, and managing insights have been granted (simulation).
-                                                Specific permissions vary by platform and are handled during the OAuth connection process.
-                                                {(channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0) && (
-                                                  <> <br/>Example requested scopes might include: {channel.oauthPermissionsExample.join(', ')}.</>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-xs text-muted-foreground">Connected Since</Label>
-                                            <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words">
-                                                January 1, 2024 (Mock)
-                                            </p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor={`customApiEndpoint-${channel.id}`} className="text-xs text-muted-foreground">Custom API Endpoint (Optional)</Label>
-                                            <Input id={`customApiEndpoint-${channel.id}`} placeholder="e.g., https://graph.facebook.com/v18.0" className="text-xs h-8"/>
-                                            <p className="text-xs text-muted-foreground">For advanced users with specific API needs (not functional).</p>
-                                        </div>
+                                        <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Connected Account</Label> <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words"> {channel.accountIdentifier || "N/A"} </p> </div>
+                                        <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Permissions Granted (Mock)</Label> <div className="text-xs bg-background/70 p-2 rounded-md leading-relaxed break-words"> Standard permissions for posting, reading engagement, and managing insights have been granted (simulation). Specific permissions vary by platform and are handled during the OAuth connection process. {(channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0) && ( <> <br/>Example requested scopes might include: {channel.oauthPermissionsExample.join(', ')}.</> )} </div> </div>
+                                        <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Connected Since</Label> <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words"> January 1, 2024 (Mock) </p> </div>
+                                        <div className="space-y-1"> <Label htmlFor={`customApiEndpoint-${channel.id}`} className="text-xs text-muted-foreground">Custom API Endpoint (Optional)</Label> <Input id={`customApiEndpoint-${channel.id}`} placeholder="e.g., https://graph.facebook.com/v18.0" className="text-xs h-8" disabled/> <p className="text-xs text-muted-foreground">For advanced users with specific API needs (not functional).</p> </div>
                                         <div className="flex justify-end gap-2 pt-2">
-                                            <Button type="button" variant="outline" size="sm" onClick={() => {
-                                                 const updatedChannels = configuredChannels.map(c => c.id === channel.id ? {...c, status: 'Needs Re-auth'} : c);
-                                                 setConfiguredChannels(updatedChannels);
-                                                 saveConfiguredChannelsToLocalStorage(updatedChannels);
-                                                 setExpandedChannelId(null);
-                                                 setTimeout(() => setExpandedChannelId(channel.id), 50); 
-                                                 setTimeout(() => toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`}), 100);
-                                                }}>
-                                                <RefreshCw className="mr-2 h-4 w-4"/> Refresh
-                                            </Button>
-                                            <Button type="button" variant="outline" size="sm" onClick={() => toast({ title: "View Platform Settings (Simulated)", description: `Opening ${channel.name} settings (not implemented).`})}>
-                                                <ExternalLink className="mr-2 h-4 w-4"/> View on {channel.name}
-                                            </Button>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => { setConfiguredDashboardChannels(prev => prev.map(c => c.id === channel.id ? {...c, status: 'Needs Re-auth'} : c)); setExpandedChannelId(null); setTimeout(() => setExpandedChannelId(channel.id), 50); setTimeout(() => toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`}), 100); }}> <RefreshCw className="mr-2 h-4 w-4"/> Refresh </Button>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => toast({ title: "View Platform Settings (Simulated)", description: `Opening ${channel.name} settings (not implemented).`})}> <ExternalLink className="mr-2 h-4 w-4"/> View on {channel.name} </Button>
                                         </div>
                                     </div>
                                   </>
@@ -1033,64 +879,34 @@ export default function SystemConfigurationPage() {
                     No platforms configured yet. Add platforms using the selector above.
                   </p>
                 )}
-
                  <Button onClick={handleSaveDashboardPreferences} className="mt-6">Save Dashboard Preferences</Button>
-                 <p className="text-xs text-muted-foreground mt-2">This saves which of your connected channels appear on the main Dashboard Overview.</p>
+                 <p className="text-xs text-muted-foreground mt-2">This saves which of your configured channels appear on the main Dashboard Overview (only 'Connected' ones will be shown).</p>
               </div>
             </TabsContent>
 
             <TabsContent value="storage-settings">
               <div className="space-y-6 p-4 border rounded-md bg-card">
-                <h3 className="text-lg font-medium mb-2 flex items-center">
-                  <HardDrive className="mr-2 h-5 w-5 text-primary" />
-                  Storage Settings
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Configure where your media assets and other large files will be stored.
-                </p>
+                <h3 className="text-lg font-medium mb-2 flex items-center"> <HardDrive className="mr-2 h-5 w-5 text-primary" /> Storage Settings </h3>
+                <p className="text-sm text-muted-foreground"> Configure where your media assets and other large files will be stored. </p>
                 <div className="space-y-2">
                   <Label htmlFor="storageProviderCombobox">Storage Provider</Label>
                     <Popover open={isStorageProviderPopoverOpen} onOpenChange={setIsStorageProviderPopoverOpen}>
                       <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          id="storageProviderCombobox"
-                          aria-expanded={isStorageProviderPopoverOpen}
-                          className="w-full md:w-[300px] justify-between"
-                        >
-                          {selectedStorageProviderId
-                            ? availableStorageProviders.find(p => p.id === selectedStorageProviderId)?.name
-                            : "Select storage provider..."}
+                        <Button variant="outline" role="combobox" id="storageProviderCombobox" aria-expanded={isStorageProviderPopoverOpen} className="w-full md:w-[300px] justify-between">
+                          {selectedStorageProviderId ? availableStorageProviders.find(p => p.id === selectedStorageProviderId)?.name : "Select storage provider..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                         <Command>
-                          <CommandInput
-                            placeholder="Search provider..."
-                            value={storageProviderSearchValue}
-                            onValueChange={setStorageProviderSearchValue}
-                          />
-                          <CommandEmpty>No provider found.</CommandEmpty>
+                          <CommandInput placeholder="Search provider..." value={storageProviderSearchValue} onValueChange={setStorageProviderSearchValue} />
                           <CommandList>
+                            <CommandEmpty>No provider found.</CommandEmpty>
                             <CommandGroup>
-                              {availableStorageProviders
-                                .filter(p => p.name.toLowerCase().includes(storageProviderSearchValue.toLowerCase()))
+                              {availableStorageProviders.filter(p => p.name.toLowerCase().includes(storageProviderSearchValue.toLowerCase()))
                                 .map((provider) => (
-                                <CommandItem
-                                  key={provider.id}
-                                  value={provider.name}
-                                  onSelect={() => {
-                                    setSelectedStorageProviderId(provider.id);
-                                    setStorageConfigInputs({}); 
-                                    setIsStorageProviderPopoverOpen(false);
-                                    setStorageProviderSearchValue("");
-                                  }}
-                                  className="flex items-center gap-2 cursor-pointer"
-                                >
-                                  {provider.icon || <Database className="h-4 w-4 text-muted-foreground" />}
-                                  {provider.name}
+                                <CommandItem key={provider.id} value={provider.name} onSelect={() => { setSelectedStorageProviderId(provider.id); setStorageConfigInputs({}); setIsStorageProviderPopoverOpen(false); setStorageProviderSearchValue(""); }} className="flex items-center gap-2 cursor-pointer">
+                                  {provider.icon || <Database className="h-4 w-4 text-muted-foreground" />} {provider.name}
                                   <Check className={cn("ml-auto h-4 w-4", selectedStorageProviderId === provider.id ? "opacity-100" : "opacity-0")}/>
                                 </CommandItem>
                               ))}
@@ -1105,37 +921,18 @@ export default function SystemConfigurationPage() {
                   <div key={field.id} className="space-y-2 animate-in fade-in duration-300">
                     <Label htmlFor={`storage-${field.id}`}>{field.label}</Label>
                     {field.type === 'select' ? (
-                      <Select
-                        value={storageConfigInputs[field.id] || (field.options && field.options.length > 0 ? field.options[0] : '')}
-                        onValueChange={(value) => handleStorageConfigInputChange(field.id, value)}
-                      >
-                        <SelectTrigger id={`storage-${field.id}`}>
-                          <SelectValue placeholder={`Select ${field.label}`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {field.options?.map(option => (
-                            <SelectItem key={option} value={option}>{option}</SelectItem>
-                          ))}
-                        </SelectContent>
+                      <Select value={storageConfigInputs[field.id] || (field.options && field.options.length > 0 ? field.options[0] : '')} onValueChange={(value) => handleStorageConfigInputChange(field.id, value)}>
+                        <SelectTrigger id={`storage-${field.id}`}> <SelectValue placeholder={`Select ${field.label}`} /> </SelectTrigger>
+                        <SelectContent> {field.options?.map(option => ( <SelectItem key={option} value={option}>{option}</SelectItem> ))} </SelectContent>
                       </Select>
                     ) : (
-                      <Input
-                        id={`storage-${field.id}`}
-                        type={field.type}
-                        placeholder={field.placeholder || `Enter ${field.label}`}
-                        value={storageConfigInputs[field.id] || ''}
-                        onChange={(e) => handleStorageConfigInputChange(field.id, e.target.value)}
-                      />
+                      <Input id={`storage-${field.id}`} type={field.type} placeholder={field.placeholder || `Enter ${field.label}`} value={storageConfigInputs[field.id] || ''} onChange={(e) => handleStorageConfigInputChange(field.id, e.target.value)} />
                     )}
                   </div>
                 ))}
                 
-                {selectedStorageProviderId && (
-                    <Button onClick={handleSaveStorageConfiguration} className="mt-4">Save Storage Configuration</Button>
-                )}
-                {!selectedStorageProviderId && (
-                    <p className="text-xs text-muted-foreground mt-2">Select a provider to see configuration options.</p>
-                )}
+                {selectedStorageProviderId && ( <Button onClick={handleSaveStorageConfiguration} className="mt-4">Save Storage Configuration</Button> )}
+                {!selectedStorageProviderId && ( <p className="text-xs text-muted-foreground mt-2">Select a provider to see configuration options.</p> )}
               </div>
             </TabsContent>
             
@@ -1145,3 +942,4 @@ export default function SystemConfigurationPage() {
     </MainLayout>
   );
 }
+
