@@ -59,7 +59,8 @@ import {
   FileText,
   Filter,
   UploadCloud,
-  HardDrive
+  HardDrive,
+  Database, // Added for Storage Settings
 } from 'lucide-react';
 import {
   Dialog,
@@ -172,6 +173,63 @@ const awsRegions = [
 
 const LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY = 'marketMaestroDashboardChannels';
 
+interface StorageProviderConfigField {
+  id: string;
+  label: string;
+  type: 'text' | 'password' | 'select';
+  placeholder?: string;
+  options?: string[]; // For select type
+}
+interface StorageProviderOption {
+  id: string;
+  name: string;
+  icon?: React.ReactNode; // Optional icon
+  configFields: StorageProviderConfigField[];
+}
+
+const availableStorageProviders: StorageProviderOption[] = [
+  {
+    id: "firebase_storage",
+    name: "Firebase Cloud Storage",
+    icon: <Database className="h-4 w-4 text-yellow-500" />,
+    configFields: [
+      { id: "projectId", label: "Firebase Project ID", type: "text", placeholder: "your-firebase-project-id" },
+      { id: "bucketName", label: "Storage Bucket Name", type: "text", placeholder: "your-project-id.appspot.com" },
+      { id: "serviceAccount", label: "Service Account JSON (Path or Content)", type: "password", placeholder: "Paste JSON or path to file" },
+    ],
+  },
+  {
+    id: "aws_s3",
+    name: "Amazon S3",
+    icon: <Database className="h-4 w-4 text-orange-500" />,
+    configFields: [
+      { id: "accessKeyId", label: "AWS Access Key ID", type: "text", placeholder: "AKIAIOSFODNN7EXAMPLE" },
+      { id: "secretAccessKey", label: "AWS Secret Access Key", type: "password", placeholder: "Your Secret Key" },
+      { id: "bucketName", label: "S3 Bucket Name", type: "text", placeholder: "your-s3-bucket-name" },
+      { id: "region", label: "AWS Region", type: "select", options: awsRegions },
+    ],
+  },
+  {
+    id: "cloudinary",
+    name: "Cloudinary",
+    icon: <ImageIconLucide className="h-4 w-4 text-blue-400" />,
+    configFields: [
+      { id: "cloudName", label: "Cloud Name", type: "text", placeholder: "your-cloud-name" },
+      { id: "apiKey", label: "API Key", type: "text", placeholder: "Your Cloudinary API Key" },
+      { id: "apiSecret", label: "API Secret", type: "password", placeholder: "Your Cloudinary API Secret" },
+    ],
+  },
+  {
+    id: "local_server",
+    name: "Local Server Storage",
+    icon: <HardDrive className="h-4 w-4 text-gray-500" />,
+    configFields: [
+      { id: "storagePath", label: "Storage Path", type: "text", placeholder: "/var/www/myapp/storage" },
+      { id: "baseUrl", label: "Public Base URL (Optional)", type: "text", placeholder: "https://cdn.example.com/media" },
+    ],
+  },
+];
+
 
 export default function SystemConfigurationPage() {
   const [selectedProvider, setSelectedProvider] = React.useState<AiProvider>("gemini");
@@ -202,6 +260,11 @@ export default function SystemConfigurationPage() {
   const [platformSearchValue, setPlatformSearchValue] = React.useState("");
   const [expandedChannelId, setExpandedChannelId] = React.useState<string | null>(null);
 
+  const [selectedStorageProviderId, setSelectedStorageProviderId] = React.useState<string | null>(null);
+  const [storageConfigInputs, setStorageConfigInputs] = React.useState<Record<string, string>>({});
+  const [isStorageProviderPopoverOpen, setIsStorageProviderPopoverOpen] = React.useState(false);
+  const [storageProviderSearchValue, setStorageProviderSearchValue] = React.useState("");
+
 
   const { toast } = useToast();
 
@@ -211,25 +274,19 @@ export default function SystemConfigurationPage() {
         const storedChannels = localStorage.getItem('marketMaestroConfiguredChannels');
         if (storedChannels) {
             try {
-                initialChannels = JSON.parse(storedChannels);
-                if (!Array.isArray(initialChannels) || !initialChannels.every(ch => typeof ch.id === 'string' && typeof ch.name === 'string')) {
-                    throw new Error("Invalid channel data structure");
+                const parsedData = JSON.parse(storedChannels);
+                if (Array.isArray(parsedData) && parsedData.every(ch => typeof ch.id === 'string' && typeof ch.name === 'string' && typeof ch.status === 'string')) {
+                    initialChannels = parsedData.map((ch: Omit<ConfiguredSocialChannel, 'icon'>) => {
+                        const basePlatform = availableSocialPlatforms.find(p => p.id === ch.id);
+                        return { ...ch, icon: basePlatform?.icon || <Share2Icon className="h-5 w-5 text-muted-foreground"/>, oauthPermissionsExample: basePlatform?.oauthPermissionsExample };
+                    });
+                } else {
+                    throw new Error("Invalid channel data structure in localStorage");
                 }
-                 // Re-map icons as they are not serializable
-                initialChannels = initialChannels.map(ch => {
-                    const basePlatform = availableSocialPlatforms.find(p => p.id === ch.id);
-                    return { ...ch, icon: basePlatform?.icon || <Share2Icon className="h-5 w-5 text-muted-foreground"/> };
-                });
             } catch (e) {
                 console.error("Failed to parse configured channels from localStorage", e);
-                 initialChannels = [
-                    { id: 'facebook', name: 'Facebook', icon: <FacebookIconSVG className="h-5 w-5 text-blue-600" />, status: 'Disconnected', accountIdentifier: undefined, oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='facebook')?.oauthPermissionsExample },
-                 ];
+                 initialChannels = []; // Default to empty if parsing fails
             }
-        } else {
-             initialChannels = [
-                { id: 'facebook', name: 'Facebook', icon: <FacebookIconSVG className="h-5 w-5 text-blue-600" />, status: 'Disconnected', accountIdentifier: undefined, oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='facebook')?.oauthPermissionsExample },
-             ];
         }
     }
     setConfiguredChannels(initialChannels);
@@ -240,8 +297,8 @@ export default function SystemConfigurationPage() {
       const newChannel: ConfiguredSocialChannel = { ...platform, status: 'Disconnected', accountIdentifier: undefined };
       const updatedChannels = [...configuredChannels, newChannel];
       setConfiguredChannels(updatedChannels);
-      setExpandedChannelId(platform.id);
-      toast({ title: `${platform.name} added. Please connect your account below.`});
+      setExpandedChannelId(platform.id); // Expand the newly added item
+      toast({ title: `${platform.name} added. Please configure and connect your account below.`});
       saveConfiguredChannelsToLocalStorage(updatedChannels);
     } else {
       toast({ title: `${platform.name} is already in your list.`, variant: "default"});
@@ -252,8 +309,7 @@ export default function SystemConfigurationPage() {
   
   const saveConfiguredChannelsToLocalStorage = (channels: ConfiguredSocialChannel[]) => {
     if (typeof window !== 'undefined') {
-        // Strip non-serializable parts (like ReactNode icons) before saving
-        const serializableChannels = channels.map(({icon, ...rest}) => rest);
+        const serializableChannels = channels.map(({icon, oauthPermissionsExample, ...rest}) => rest); // Remove non-serializable parts
         localStorage.setItem('marketMaestroConfiguredChannels', JSON.stringify(serializableChannels));
     }
   };
@@ -268,54 +324,51 @@ export default function SystemConfigurationPage() {
     saveConfiguredChannelsToLocalStorage(updatedChannels);
   };
 
-  const performConnectionAction = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
+ const performConnectionAction = React.useCallback((channelId: string, actionType: 'Connect' | 'Re-authenticate' | 'Disconnect') => {
     let toastTitle = "";
     let toastDescription = "";
-    let newStatus: ConfiguredSocialChannel['status'] = 'Connected';
-    let actionType: 'Connect' | 'Re-authenticate' = 'Connect';
+    let newStatus: ConfiguredSocialChannel['status'] = 'Disconnected'; // Default for disconnect
+    let newAccountIdentifier: string | undefined = undefined;
 
     const channelToUpdate = configuredChannels.find(c => c.id === channelId);
     if (!channelToUpdate) return;
     
-    if (currentStatus === 'Disconnected') {
+    if (actionType === 'Connect') {
         toastTitle = `Connecting ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "OAuth flow would happen here. Simulating successful connection.";
-        actionType = 'Connect';
-    } else if (currentStatus === 'Needs Re-auth') {
+        newStatus = 'Connected';
+        newAccountIdentifier = `${channelToUpdate.name} User (Mock)`;
+    } else if (actionType === 'Re-authenticate') {
         toastTitle = `Re-authenticating ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "OAuth re-authentication flow would happen here. Simulating success.";
-        actionType = 'Re-authenticate';
+        newStatus = 'Connected';
+        newAccountIdentifier = channelToUpdate.accountIdentifier || `${channelToUpdate.name} User (Mock)`;
+    } else if (actionType === 'Disconnect') {
+        toastTitle = `Disconnecting ${channelToUpdate.name}... (Simulation)`;
+        toastDescription = "Simulating successful disconnection.";
+        newStatus = 'Disconnected';
+        newAccountIdentifier = undefined;
     } else {
-        return; // Should not happen if called from correct buttons
+        return; 
     }
     
     // Simulate API call and then update
     setTimeout(() => {
         const updatedChannels = configuredChannels.map(channel => {
         if (channel.id === channelId) {
-            return { ...channel, status: newStatus, accountIdentifier: channel.accountIdentifier || `${channel.name} User (Mock)` };
+            return { ...channel, status: newStatus, accountIdentifier: newAccountIdentifier };
         }
         return channel;
         });
         setConfiguredChannels(updatedChannels);
-        setExpandedChannelId(null); 
+        if (actionType === 'Connect' || actionType === 'Re-authenticate') {
+           setExpandedChannelId(null); // Close inline panel on successful (simulated) connect/re-auth
+        }
         toast({ title: toastTitle.replace('...', 'Success!'), description: toastDescription.replace('...', 'successful.') });
         saveConfiguredChannelsToLocalStorage(updatedChannels);
     }, 1000);
   }, [configuredChannels, toast]);
 
-
-  const handleDisconnectChannel = (channelId: string) => {
-    const updatedChannels = configuredChannels.map(channel =>
-        channel.id === channelId ? { ...channel, status: 'Disconnected', accountIdentifier: undefined } : channel
-    );
-    setConfiguredChannels(updatedChannels);
-    if (expandedChannelId === channelId) {
-        setExpandedChannelId(null);
-    }
-    toast({ title: "Channel disconnected (simulation)." });
-    saveConfiguredChannelsToLocalStorage(updatedChannels);
-  };
 
   const handleToggleManageSection = (channelId: string) => {
     setExpandedChannelId(prevId => (prevId === channelId ? null : channelId));
@@ -323,13 +376,13 @@ export default function SystemConfigurationPage() {
 
 
   const handleSaveSocialMediaConnectionsForDashboard = () => {
-    // This function will now save the `configuredChannels` list to localStorage,
-    // which will be used by the dashboard to determine which *connected* channels to show.
-    // The dashboard will then filter these based on their 'Connected' status.
-    saveConfiguredChannelsToLocalStorage(configuredChannels); 
+    const dashboardChannels = configuredChannels
+      .filter(c => c.status === 'Connected')
+      .map(c => c.id); 
+    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(dashboardChannels));
     toast({
       title: "Social Account Dashboard Preferences Saved",
-      description: "Your preferences for which accounts are managed and their dashboard visibility have been saved.",
+      description: "Your preferences for which connected accounts appear on the main Dashboard Overview have been saved.",
       variant: "default",
     });
   };
@@ -414,6 +467,26 @@ export default function SystemConfigurationPage() {
     return 'secondary'; 
   };
 
+  const handleStorageConfigInputChange = (fieldId: string, value: string) => {
+    setStorageConfigInputs(prev => ({ ...prev, [fieldId]: value }));
+  };
+
+  const handleSaveStorageConfiguration = () => {
+    if (!selectedStorageProviderId) {
+      toast({ title: "No Provider Selected", description: "Please select a storage provider first.", variant: "destructive" });
+      return;
+    }
+    const provider = availableStorageProviders.find(p => p.id === selectedStorageProviderId);
+    console.log("Saving Storage Configuration (Simulation):");
+    console.log("Provider:", provider?.name);
+    console.log("Config:", storageConfigInputs);
+    toast({
+      title: "Storage Configuration Saved (Simulation)",
+      description: `Settings for ${provider?.name} have been noted.`,
+    });
+    // Here you would typically send this data to a backend.
+  };
+
 
   return (
     <MainLayout pageTitle="System Configuration">
@@ -492,8 +565,8 @@ export default function SystemConfigurationPage() {
                   </div>
                 )}
                  <Alert variant="default" className="bg-background/70">
-                  <AlertCircleIcon className="h-4 w-4 text-accent" />
-                  <AlertTitle className="text-accent-foreground">Model Costs & Configuration</AlertTitle>
+                  <AlertCircleIcon className="h-4 w-4" />
+                  <AlertTitle>Model Costs & Configuration</AlertTitle>
                   <AlertDescription className="text-muted-foreground">
                     Using models via OpenRouter may incur costs. Please review the pricing for your selected model on OpenRouter.
                     Note: Genkit configuration in <code>src/ai/genkit.ts</code> has been updated to read provider and model details from the <code>.env</code> file.
@@ -703,7 +776,7 @@ export default function SystemConfigurationPage() {
                   Social Media Account Connections
                 </h3>
                 <p className="text-sm text-muted-foreground mb-1">
-                  Manage which social media accounts are connected and their settings. Channels selected here will be reflected in the dashboard overview.
+                  Manage which social media accounts are connected and their settings.
                 </p>
                 <div className="space-y-2">
                     <Label htmlFor="platformCombobox">Add Platform to Configuration</Label>
@@ -716,8 +789,8 @@ export default function SystemConfigurationPage() {
                           aria-expanded={openPlatformCombobox}
                           className="w-full md:w-[300px] justify-between"
                         >
-                          {platformSearchValue && availableSocialPlatforms.find(p => p.name.toLowerCase() === platformSearchValue.toLowerCase())?.name
-                            || "Select platform..."}
+                          {availableSocialPlatforms.find(p => p.name.toLowerCase() === platformSearchValue.toLowerCase())?.name
+                            || "Select platform to configure..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -732,7 +805,7 @@ export default function SystemConfigurationPage() {
                           <CommandList>
                             <CommandGroup>
                               {availableSocialPlatforms
-                                .filter(p => !configuredChannels.find(cp => cp.id === p.id))
+                                .filter(p => !configuredChannels.find(cp => cp.id === p.id) && p.name.toLowerCase().includes(platformSearchValue.toLowerCase()))
                                 .map((platform) => (
                                 <CommandItem
                                   key={platform.id}
@@ -779,7 +852,7 @@ export default function SystemConfigurationPage() {
                                     {channel.status === 'Connected' && (
                                     <>
                                         <Button variant="ghost" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Manage</Button>
-                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => handleDisconnectChannel(channel.id)}>Disconnect</Button>
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => performConnectionAction(channel.id, 'Disconnect')}>Disconnect</Button>
                                     </>
                                     )}
                                     {channel.status === 'Needs Re-auth' && (
@@ -801,12 +874,12 @@ export default function SystemConfigurationPage() {
 
                             {expandedChannelId === channel.id && (
                             <div className="mt-3 pt-3 border-t border-dashed bg-muted/30 p-3 rounded-b-md animate-in fade-in duration-300">
-                                {(channel.status === 'Disconnected' || channel.status === 'Needs Re-auth') && (
+                                {(channel.status === 'Disconnected') && (
                                   <>
                                     <h4 className="text-sm font-semibold mb-2 text-foreground">
-                                        {channel.status === 'Disconnected' ? `Connect to ${channel.name}` : `Re-authenticate with ${channel.name}`}
+                                        Connect to {channel.name}
                                     </h4>
-                                    <p className="text-xs text-muted-foreground mb-1">This will simulate an OAuth 2.0 flow. We will request permissions for (example):</p>
+                                    <p className="text-xs text-muted-foreground mb-1">This will simulate an OAuth 2.0 flow. We would request permissions for (example):</p>
                                     {channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0 && (
                                       <ul className="list-disc list-inside text-xs text-muted-foreground pl-2 mb-3">
                                         {channel.oauthPermissionsExample.map(perm => <li key={perm}>{perm}</li>)}
@@ -826,10 +899,31 @@ export default function SystemConfigurationPage() {
                                     <Button
                                       variant="default"
                                       className="w-full"
-                                      onClick={() => performConnectionAction(channel.id, channel.status)}
+                                      onClick={() => performConnectionAction(channel.id, 'Connect')}
                                     >
-                                      {channel.status === 'Disconnected' ? <Link2IconLucide className="mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                                       Proceed to {channel.status === 'Disconnected' ? `Connect with ${channel.name}` : `Re-authenticate ${channel.name}`}
+                                      <Link2IconLucide className="mr-2 h-4 w-4" />
+                                       Proceed to Connect with {channel.name}
+                                    </Button>
+                                  </>
+                                )}
+                                 {(channel.status === 'Needs Re-auth') && (
+                                  <>
+                                    <h4 className="text-sm font-semibold mb-2 text-foreground">
+                                       Re-authenticate with {channel.name}
+                                    </h4>
+                                    <p className="text-xs text-muted-foreground mb-1">Your connection needs to be refreshed. This will simulate an OAuth 2.0 flow.</p>
+                                    {channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0 && (
+                                      <ul className="list-disc list-inside text-xs text-muted-foreground pl-2 mb-3">
+                                        {channel.oauthPermissionsExample.map(perm => <li key={perm}>{perm}</li>)}
+                                      </ul>
+                                    )}
+                                    <Button
+                                      variant="default"
+                                      className="w-full"
+                                      onClick={() => performConnectionAction(channel.id, 'Re-authenticate')}
+                                    >
+                                      <RefreshCw className="mr-2 h-4 w-4" />
+                                       Proceed to Re-authenticate {channel.name}
                                     </Button>
                                   </>
                                 )}
@@ -895,34 +989,107 @@ export default function SystemConfigurationPage() {
                 )}
 
                  <Button onClick={handleSaveSocialMediaConnectionsForDashboard} className="mt-6">Save Dashboard Preferences</Button>
-                 <p className="text-xs text-muted-foreground mt-2">This saves which of your managed channels appear on the main Dashboard Overview. Only channels marked as 'Connected' will be considered for dashboard visibility and actual posting in a real application.</p>
+                 <p className="text-xs text-muted-foreground mt-2">This saves which of your connected channels appear on the main Dashboard Overview.</p>
               </div>
             </TabsContent>
 
             <TabsContent value="storage-settings">
-              <div className="space-y-4 p-4 border rounded-md bg-card">
+              <div className="space-y-6 p-4 border rounded-md bg-card">
                 <h3 className="text-lg font-medium mb-2 flex items-center">
                   <HardDrive className="mr-2 h-5 w-5 text-primary" />
                   Storage Settings
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Configure where your media assets and other large files will be stored. (Placeholder)
+                  Configure where your media assets and other large files will be stored.
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="storageProvider">Storage Provider</Label>
-                  <Select disabled>
-                    <SelectTrigger className="w-full md:w-[300px]">
-                      <SelectValue placeholder="Select storage provider (e.g., Firebase Storage, AWS S3)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="firebase_storage">Firebase Cloud Storage</SelectItem>
-                      <SelectItem value="aws_s3">Amazon S3</SelectItem>
-                      <SelectItem value="local">Local Server Storage (Not recommended for production)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="storageProviderCombobox">Storage Provider</Label>
+                    <Popover open={isStorageProviderPopoverOpen} onOpenChange={setIsStorageProviderPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          id="storageProviderCombobox"
+                          aria-expanded={isStorageProviderPopoverOpen}
+                          className="w-full md:w-[300px] justify-between"
+                        >
+                          {selectedStorageProviderId
+                            ? availableStorageProviders.find(p => p.id === selectedStorageProviderId)?.name
+                            : "Select storage provider..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search provider..."
+                            value={storageProviderSearchValue}
+                            onValueChange={setStorageProviderSearchValue}
+                          />
+                          <CommandEmpty>No provider found.</CommandEmpty>
+                          <CommandList>
+                            <CommandGroup>
+                              {availableStorageProviders
+                                .filter(p => p.name.toLowerCase().includes(storageProviderSearchValue.toLowerCase()))
+                                .map((provider) => (
+                                <CommandItem
+                                  key={provider.id}
+                                  value={provider.name}
+                                  onSelect={() => {
+                                    setSelectedStorageProviderId(provider.id);
+                                    setStorageConfigInputs({}); // Reset config for new provider
+                                    setIsStorageProviderPopoverOpen(false);
+                                    setStorageProviderSearchValue("");
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer"
+                                >
+                                  {provider.icon || <Database className="h-4 w-4 text-muted-foreground" />}
+                                  {provider.name}
+                                  <Check className={cn("ml-auto h-4 w-4", selectedStorageProviderId === provider.id ? "opacity-100" : "opacity-0")}/>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                 </div>
-                <p className="text-xs text-muted-foreground">Configuration options for the selected provider would appear here.</p>
-                <Button variant="outline" disabled>Configure Storage</Button>
+
+                {selectedStorageProviderId && availableStorageProviders.find(p => p.id === selectedStorageProviderId)?.configFields.map(field => (
+                  <div key={field.id} className="space-y-2 animate-in fade-in duration-300">
+                    <Label htmlFor={`storage-${field.id}`}>{field.label}</Label>
+                    {field.type === 'select' ? (
+                      <Select
+                        value={storageConfigInputs[field.id] || (field.options && field.options.length > 0 ? field.options[0] : '')}
+                        onValueChange={(value) => handleStorageConfigInputChange(field.id, value)}
+                      >
+                        <SelectTrigger id={`storage-${field.id}`}>
+                          <SelectValue placeholder={`Select ${field.label}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options?.map(option => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id={`storage-${field.id}`}
+                        type={field.type}
+                        placeholder={field.placeholder || `Enter ${field.label}`}
+                        value={storageConfigInputs[field.id] || ''}
+                        onChange={(e) => handleStorageConfigInputChange(field.id, e.target.value)}
+                      />
+                    )}
+                  </div>
+                ))}
+                
+                {selectedStorageProviderId && (
+                    <Button onClick={handleSaveStorageConfiguration} className="mt-4">Save Storage Configuration</Button>
+                )}
+                {!selectedStorageProviderId && (
+                    <p className="text-xs text-muted-foreground mt-2">Select a provider to see configuration options.</p>
+                )}
               </div>
             </TabsContent>
             
@@ -932,3 +1099,4 @@ export default function SystemConfigurationPage() {
     </MainLayout>
   );
 }
+
