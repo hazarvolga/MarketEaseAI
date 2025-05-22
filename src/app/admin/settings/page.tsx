@@ -189,8 +189,8 @@ export default function SystemConfigurationPage() {
   const [smtpPassword, setSmtpPassword] = React.useState("");
   const [smtpEncryption, setSmtpEncryption] = React.useState("tls");
   const [apiKey, setApiKey] = React.useState("");
-  const [apiSecret, setApiSecret] = React.useState(""); 
-  const [sendingDomain, setSendingDomain] = React.useState(""); 
+  const [apiSecret, setApiSecret] = React.useState("");
+  const [sendingDomain, setSendingDomain] = React.useState("");
   const [sesAccessKey, setSesAccessKey] = React.useState("");
   const [sesSecretKey, setSesSecretKey] = React.useState("");
   const [sesRegion, setSesRegion] = React.useState("us-east-1");
@@ -212,9 +212,17 @@ export default function SystemConfigurationPage() {
         if (storedChannels) {
             try {
                 initialChannels = JSON.parse(storedChannels);
+                if (!Array.isArray(initialChannels) || !initialChannels.every(ch => typeof ch.id === 'string' && typeof ch.name === 'string')) {
+                    throw new Error("Invalid channel data structure");
+                }
+                 // Re-map icons as they are not serializable
+                initialChannels = initialChannels.map(ch => {
+                    const basePlatform = availableSocialPlatforms.find(p => p.id === ch.id);
+                    return { ...ch, icon: basePlatform?.icon || <Share2Icon className="h-5 w-5 text-muted-foreground"/> };
+                });
             } catch (e) {
                 console.error("Failed to parse configured channels from localStorage", e);
-                 initialChannels = [ // Fallback if parsing fails or no data
+                 initialChannels = [
                     { id: 'facebook', name: 'Facebook', icon: <FacebookIconSVG className="h-5 w-5 text-blue-600" />, status: 'Disconnected', accountIdentifier: undefined, oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='facebook')?.oauthPermissionsExample },
                  ];
             }
@@ -232,19 +240,21 @@ export default function SystemConfigurationPage() {
       const newChannel: ConfiguredSocialChannel = { ...platform, status: 'Disconnected', accountIdentifier: undefined };
       const updatedChannels = [...configuredChannels, newChannel];
       setConfiguredChannels(updatedChannels);
-      setExpandedChannelId(platform.id); 
+      setExpandedChannelId(platform.id);
       toast({ title: `${platform.name} added. Please connect your account below.`});
       saveConfiguredChannelsToLocalStorage(updatedChannels);
     } else {
       toast({ title: `${platform.name} is already in your list.`, variant: "default"});
     }
-    setPlatformSearchValue(""); 
-    setOpenPlatformCombobox(false); 
+    setPlatformSearchValue("");
+    setOpenPlatformCombobox(false);
   };
   
   const saveConfiguredChannelsToLocalStorage = (channels: ConfiguredSocialChannel[]) => {
     if (typeof window !== 'undefined') {
-        localStorage.setItem('marketMaestroConfiguredChannels', JSON.stringify(channels));
+        // Strip non-serializable parts (like ReactNode icons) before saving
+        const serializableChannels = channels.map(({icon, ...rest}) => rest);
+        localStorage.setItem('marketMaestroConfiguredChannels', JSON.stringify(serializableChannels));
     }
   };
 
@@ -258,20 +268,25 @@ export default function SystemConfigurationPage() {
     saveConfiguredChannelsToLocalStorage(updatedChannels);
   };
 
-  const performConnectionAction = React.useCallback((channelId: string, actionType: 'Connect' | 'Re-authenticate') => {
+  const performConnectionAction = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
     let toastTitle = "";
     let toastDescription = "";
     let newStatus: ConfiguredSocialChannel['status'] = 'Connected';
+    let actionType: 'Connect' | 'Re-authenticate' = 'Connect';
 
     const channelToUpdate = configuredChannels.find(c => c.id === channelId);
     if (!channelToUpdate) return;
-
-    if (actionType === 'Connect') {
+    
+    if (currentStatus === 'Disconnected') {
         toastTitle = `Connecting ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "OAuth flow would happen here. Simulating successful connection.";
-    } else if (actionType === 'Re-authenticate') {
+        actionType = 'Connect';
+    } else if (currentStatus === 'Needs Re-auth') {
         toastTitle = `Re-authenticating ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "OAuth re-authentication flow would happen here. Simulating success.";
+        actionType = 'Re-authenticate';
+    } else {
+        return; // Should not happen if called from correct buttons
     }
     
     // Simulate API call and then update
@@ -283,7 +298,7 @@ export default function SystemConfigurationPage() {
         return channel;
         });
         setConfiguredChannels(updatedChannels);
-        setExpandedChannelId(null); // Close panel after action
+        setExpandedChannelId(null); 
         toast({ title: toastTitle.replace('...', 'Success!'), description: toastDescription.replace('...', 'successful.') });
         saveConfiguredChannelsToLocalStorage(updatedChannels);
     }, 1000);
@@ -308,13 +323,13 @@ export default function SystemConfigurationPage() {
 
 
   const handleSaveSocialMediaConnectionsForDashboard = () => {
-    const channelsForDashboard = configuredChannels
-        .filter(c => c.status === 'Connected')
-        .map(c => c.id);
-    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(channelsForDashboard));
+    // This function will now save the `configuredChannels` list to localStorage,
+    // which will be used by the dashboard to determine which *connected* channels to show.
+    // The dashboard will then filter these based on their 'Connected' status.
+    saveConfiguredChannelsToLocalStorage(configuredChannels); 
     toast({
       title: "Social Account Dashboard Preferences Saved",
-      description: "Your preferences for dashboard visibility have been saved.",
+      description: "Your preferences for which accounts are managed and their dashboard visibility have been saved.",
       variant: "default",
     });
   };
@@ -409,13 +424,12 @@ export default function SystemConfigurationPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <Tabs defaultValue="ai-settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-1 mb-6 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-1 mb-6 h-auto">
               <TabsTrigger value="ai-settings" className="py-2 text-xs sm:text-sm"><Cpu className="mr-1 h-4 w-4 hidden sm:inline-block"/>AI Settings</TabsTrigger>
               <TabsTrigger value="smtp-settings" className="py-2 text-xs sm:text-sm"><Mailbox className="mr-1 h-4 w-4 hidden sm:inline-block"/>SMTP Settings</TabsTrigger>
               <TabsTrigger value="email-config" className="py-2 text-xs sm:text-sm"><Mail className="mr-1 h-4 w-4 hidden sm:inline-block"/>Email Config</TabsTrigger>
               <TabsTrigger value="social-accounts" className="py-2 text-xs sm:text-sm"><Share2Icon className="mr-1 h-4 w-4 hidden sm:inline-block"/>Social Accounts</TabsTrigger>
               <TabsTrigger value="storage-settings" className="py-2 text-xs sm:text-sm"><HardDrive className="mr-1 h-4 w-4 hidden sm:inline-block"/>Storage Settings</TabsTrigger>
-              <TabsTrigger value="notifications" className="py-2 text-xs sm:text-sm"><BellIcon className="mr-1 h-4 w-4 hidden sm:inline-block"/>Notifications</TabsTrigger>
             </TabsList>
 
             <TabsContent value="ai-settings">
@@ -472,7 +486,7 @@ export default function SystemConfigurationPage() {
                       />
                        <p className="text-xs text-muted-foreground">
                         Specify the model identifier from OpenRouter.
-                        Refer to <a href="https://openrouter.ai/docs" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">OpenRouter documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></a> for available models and pricing.
+                        Refer to <Link href="https://openrouter.ai/docs" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">OpenRouter documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link> for available models and pricing.
                       </p>
                     </div>
                   </div>
@@ -648,7 +662,7 @@ export default function SystemConfigurationPage() {
                         <Input id="apiSecret" type="password" placeholder="If provider requires a secret" value={apiSecret} onChange={e => setApiSecret(e.target.value)}/>
                     </div>
                      <p className="text-xs text-muted-foreground">
-                        Refer to your <a href="#" className="underline hover:text-primary" onClick={(e) => {e.preventDefault(); toast({title:"Documentation", description:"Link to specific provider docs would go here."})}}>{selectedEmailService.replace(/_/g, ' ').toUpperCase()} documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></a> for API key details.
+                        Refer to your <Link href="#" className="underline hover:text-primary" onClick={(e) => {e.preventDefault(); toast({title:"Documentation", description:"Link to specific provider docs would go here."})}}>{selectedEmailService.replace(/_/g, ' ').toUpperCase()} documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link> for API key details.
                     </p>
                     <Button variant="outline" onClick={() => toast({ title: `Verify ${selectedEmailService.toUpperCase()} (Simulation)`, description: "Checking API key..."})}>Verify & Save API Key</Button>
                   </div>
@@ -812,7 +826,7 @@ export default function SystemConfigurationPage() {
                                     <Button
                                       variant="default"
                                       className="w-full"
-                                      onClick={() => performConnectionAction(channel.id, channel.status === 'Disconnected' ? 'Connect' : 'Re-authenticate')}
+                                      onClick={() => performConnectionAction(channel.id, channel.status)}
                                     >
                                       {channel.status === 'Disconnected' ? <Link2IconLucide className="mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                                        Proceed to {channel.status === 'Disconnected' ? `Connect with ${channel.name}` : `Re-authenticate ${channel.name}`}
@@ -856,7 +870,7 @@ export default function SystemConfigurationPage() {
                                                  setConfiguredChannels(updatedChannels);
                                                  saveConfiguredChannelsToLocalStorage(updatedChannels);
                                                  setExpandedChannelId(null);
-                                                 setTimeout(() => setExpandedChannelId(channel.id), 50); // Re-open to show re-auth state
+                                                 setTimeout(() => setExpandedChannelId(channel.id), 50); 
                                                  toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`});
                                                 }}>
                                                 <RefreshCw className="mr-2 h-4 w-4"/> Refresh
@@ -881,7 +895,7 @@ export default function SystemConfigurationPage() {
                 )}
 
                  <Button onClick={handleSaveSocialMediaConnectionsForDashboard} className="mt-6">Save Dashboard Preferences</Button>
-                 <p className="text-xs text-muted-foreground mt-2">This saves which of your *connected* channels appear on the main Dashboard Overview. Only 'Connected' channels can be selected for dashboard visibility here, and only 'Connected' channels will actually fetch data or allow posting in a real application.</p>
+                 <p className="text-xs text-muted-foreground mt-2">This saves which of your managed channels appear on the main Dashboard Overview. Only channels marked as 'Connected' will be considered for dashboard visibility and actual posting in a real application.</p>
               </div>
             </TabsContent>
 
@@ -912,18 +926,6 @@ export default function SystemConfigurationPage() {
               </div>
             </TabsContent>
             
-            <TabsContent value="notifications">
-              <div className="space-y-4 p-4 border rounded-md bg-card">
-                <h3 className="text-lg font-medium mb-2 flex items-center">
-                  <BellIcon className="h-5 w-5 mr-2 text-primary" />
-                  Notification Settings
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Configure system-wide notification preferences for events like post failures, approvals, or significant engagement spikes. (Placeholder)
-                </p>
-                <Button variant="outline" onClick={() => toast({title: "Configure Notifications", description:"This feature is not implemented yet."})}>Configure Notifications</Button>
-              </div>
-            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
