@@ -9,29 +9,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
+import {
   Cog,
-  Cpu, 
-  Link2 as Link2IconLucide, 
-  UserPlus, 
-  Mailbox, 
-  SlidersHorizontal, 
-  PlusCircle as PlusCircleIcon, 
-  Check, 
-  ChevronsUpDown, 
-  ListChecks, 
-  FileText as FileTextIcon, 
-  ExternalLink, 
-  Search, 
+  Cpu,
+  Link2 as Link2IconLucide,
+  UserPlus,
+  Mailbox,
+  SlidersHorizontal,
+  PlusCircle as PlusCircleIcon,
+  Check,
+  ChevronsUpDown,
+  ListChecks,
+  FileText as FileTextIcon,
+  ExternalLink,
+  Search,
   Trash2,
-  Users as UsersIconLucide, 
+  Users as UsersIconLucide,
   Bell as BellIcon,
   Briefcase,
   AlertCircle as AlertCircleIcon,
   RefreshCw,
   Share2 as Share2Icon,
   Building,
-  Image as ImageIconLucide,
+  ImageIcon as ImageIconLucide,
   Youtube,
   ShieldCheck,
   Paperclip,
@@ -46,7 +46,7 @@ import {
   Lightbulb,
   PanelLeft,
   UserCircle,
-  Mail,
+  Mail, // Added Mail for new tab
   MailPlus,
   Edit3,
   CalendarDays,
@@ -97,7 +97,7 @@ const InstagramIconSVG = (props: CustomIconProps) => (
   </svg>
 );
 
-const TwitterIconSVG = (props: CustomIconProps) => ( 
+const TwitterIconSVG = (props: CustomIconProps) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props} className={cn("h-5 w-5", props.className)}>
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
@@ -111,7 +111,7 @@ const LinkedinIconSVG = (props: CustomIconProps) => (
 
 const TikTokIconSVG = (props: CustomIconProps) => (
   <svg viewBox="0 0 28 28" fill="currentColor" {...props} className={cn("h-5 w-5", props.className)}>
-    <path d="M20.76,10.28A5.76,5.76,0,0,0,15,4.51V15.6a5.75,5.75,0,1,1-5.75-5.75,5.63,5.63,0,0,1,.13-1.27A0.76,0.76,0,0,0,9.2,8C8.7,8,8.47,8.21,8.47,8.6V15.3a0.76,0.76,0,0,0,.18.51A8.09,8.09,0,0,0,9.2,16.1a8.24,8.24,0,1,0,8.23-8.24A8.12,8.12,0,0,0,15,7.61V13a0.75,0.75,0,0,0,.75.75h2.28A5.76,5.76,0,0,0,20.76,10.28Z"/>
+    <path d="M20.76,10.28A5.76,5.76,0,0,0,15,4.51V15.6a5.75,5.75,0,1,1-5.75-5.75,5.63,5.63,0,0,1,.13-1.27A0.76,0.76,0,0,0,9.2,8C8.7,8,8.47,8.21,8.47,8.6V15.3a0.76,0.76,0,0,0,.18,.51A8.09,8.09,0,0,0,9.2,16.1a8.24,8.24,0,1,0,8.23-8.24A8.12,8.12,0,0,0,15,7.61V13a0.75,0.75,0,0,0,.75.75h2.28A5.76,5.76,0,0,0,20.76,10.28Z"/>
   </svg>
 );
 
@@ -176,16 +176,16 @@ export default function SystemConfigurationPage() {
   const [systemPassword, setSystemPassword] = React.useState("");
 
   const [isAiConfigModalOpen, setIsAiConfigModalOpen] = React.useState(false);
-  
+
   const [selectedEmailService, setSelectedEmailService] = React.useState<EmailServiceProvider>("generic_smtp");
   const [smtpHost, setSmtpHost] = React.useState("");
   const [smtpPort, setSmtpPort] = React.useState("");
   const [smtpUser, setSmtpUser] = React.useState("");
   const [smtpPassword, setSmtpPassword] = React.useState("");
   const [smtpEncryption, setSmtpEncryption] = React.useState("tls");
-  const [apiKey, setApiKey] = React.useState(""); 
-  const [apiSecret, setApiSecret] = React.useState(""); 
-  const [sendingDomain, setSendingDomain] = React.useState(""); 
+  const [apiKey, setApiKey] = React.useState("");
+  const [apiSecret, setApiSecret] = React.useState("");
+  const [sendingDomain, setSendingDomain] = React.useState("");
   const [sesAccessKey, setSesAccessKey] = React.useState("");
   const [sesSecretKey, setSesSecretKey] = React.useState("");
   const [sesRegion, setSesRegion] = React.useState("us-east-1");
@@ -201,7 +201,7 @@ export default function SystemConfigurationPage() {
 
   React.useEffect(() => {
     const storedChannelsString = localStorage.getItem(LOCAL_STORAGE_CONFIGURED_CHANNELS_KEY);
-    const initialChannels: ConfiguredSocialChannel[] = [ 
+    const initialChannels: ConfiguredSocialChannel[] = [
       { id: 'facebook', name: 'Facebook', icon: <FacebookIconSVG className="h-5 w-5 text-blue-600" />, status: 'Connected', accountIdentifier: 'MarketMaestro FB Page', oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='facebook')?.oauthPermissionsExample },
       { id: 'instagram', name: 'Instagram', icon: <InstagramIconSVG className="h-5 w-5 text-pink-500" />, status: 'Connected', accountIdentifier: '@MarketMaestroIG', oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='instagram')?.oauthPermissionsExample },
       { id: 'twitter', name: 'X (Twitter)', icon: <TwitterIconSVG className="h-5 w-5" />, status: 'Needs Re-auth', accountIdentifier: '@MarketMaestroX', oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='twitter')?.oauthPermissionsExample },
@@ -217,14 +217,14 @@ export default function SystemConfigurationPage() {
           });
           setConfiguredChannels(hydratedChannels);
         } else {
-           setConfiguredChannels(initialChannels); 
+           setConfiguredChannels(initialChannels);
         }
       } catch (e) {
         console.error("Error parsing configured social channels from localStorage", e);
-         setConfiguredChannels(initialChannels); 
+         setConfiguredChannels(initialChannels);
       }
     } else {
-       setConfiguredChannels(initialChannels); 
+       setConfiguredChannels(initialChannels);
     }
   }, []);
 
@@ -233,46 +233,47 @@ export default function SystemConfigurationPage() {
       const newChannel: ConfiguredSocialChannel = { ...platform, status: 'Disconnected', accountIdentifier: undefined };
       const updatedChannels = [...configuredChannels, newChannel];
       setConfiguredChannels(updatedChannels);
-      setExpandedChannelId(platform.id); 
+      setExpandedChannelId(platform.id); // Expand the newly added item
       toast({ title: `${platform.name} added. Please connect your account below.`});
     } else {
       toast({ title: `${platform.name} is already in your list.`, variant: "default"});
     }
-    setPlatformSearchValue(""); 
-    setOpenPlatformCombobox(false); 
+    setPlatformSearchValue(""); // Clear search
+    setOpenPlatformCombobox(false); // Close combobox
   };
 
   const handleRemoveChannelFromConfiguration = (platformId: string) => {
     setConfiguredChannels(prev => prev.filter(p => p.id !== platformId));
     if (expandedChannelId === platformId) {
-      setExpandedChannelId(null); 
+      setExpandedChannelId(null); // Collapse if the removed item was expanded
     }
     toast({ title: "Platform removed from list."});
   };
 
-  const performConnectionAction = (channelId: string, actionType: 'Connect' | 'Re-authenticate') => {
-    setTimeout(() => { // Defer toast to avoid state update during render
-      setConfiguredChannels(prev =>
-        prev.map(channel => {
-          if (channel.id === channelId) {
-            if (actionType === 'Connect') {
-              toast({ title: `${channel.name} connected (OAuth flow simulated).`, description: "Standard permissions granted." });
-              return { ...channel, status: 'Connected', accountIdentifier: `${channel.name} User (Mock)` };
-            } else if (actionType === 'Re-authenticate') {
-              toast({ title: `${channel.name} re-authenticated (OAuth flow simulated).`, description: "Permissions refreshed." });
-              return { ...channel, status: 'Connected', accountIdentifier: channel.accountIdentifier || `${channel.name} User (Mock)` };
-            }
+
+  const performConnectionAction = React.useCallback((channelId: string, actionType: 'Connect' | 'Re-authenticate') => {
+    setConfiguredChannels(prev =>
+      prev.map(channel => {
+        if (channel.id === channelId) {
+          if (actionType === 'Connect') {
+            toast({ title: `${channel.name} connected (OAuth flow simulated).`, description: "Standard permissions granted." });
+            return { ...channel, status: 'Connected', accountIdentifier: `${channel.name} User (Mock)` };
+          } else if (actionType === 'Re-authenticate') {
+            toast({ title: `${channel.name} re-authenticated (OAuth flow simulated).`, description: "Permissions refreshed." });
+            return { ...channel, status: 'Connected', accountIdentifier: channel.accountIdentifier || `${channel.name} User (Mock)` };
           }
-          return channel;
-        })
-      );
-    }, 0);
+        }
+        return channel;
+      })
+    );
     setExpandedChannelId(null);
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]);
+
 
   const handleDisconnectChannel = (channelId: string) => {
-    setConfiguredChannels(prev => 
-      prev.map(channel => 
+    setConfiguredChannels(prev =>
+      prev.map(channel =>
         channel.id === channelId ? { ...channel, status: 'Disconnected', accountIdentifier: undefined } : channel
       )
     );
@@ -286,6 +287,7 @@ export default function SystemConfigurationPage() {
     setExpandedChannelId(prevId => (prevId === channelId ? null : channelId));
   };
 
+
   const handleSaveSocialMediaConnections = () => {
     localStorage.setItem(LOCAL_STORAGE_CONFIGURED_CHANNELS_KEY, JSON.stringify(configuredChannels));
     toast({
@@ -296,7 +298,7 @@ export default function SystemConfigurationPage() {
   };
 
   const handleSaveAiConfiguration = async () => {
-    if (systemPassword !== "password123") { 
+    if (systemPassword !== "password123") { // Simple password check for prototype
       toast({
         title: "Authentication Failed",
         description: "Incorrect system admin password.",
@@ -322,7 +324,7 @@ export default function SystemConfigurationPage() {
       let errorDescription = "An unknown error occurred.";
       if (typeof result.error === 'string') {
         errorDescription = result.error;
-      } else if (result.error && 'flatten' in result.error) { 
+      } else if (result.error && 'flatten' in result.error) { // ZodError
         const flatError = (result.error as any).flatten();
         const fieldErrors = Object.entries(flatError.fieldErrors)
           .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
@@ -335,7 +337,7 @@ export default function SystemConfigurationPage() {
         variant: "destructive",
       });
     }
-    setSystemPassword(""); 
+    setSystemPassword(""); // Clear password
     setIsAiConfigModalOpen(false);
   };
 
@@ -368,11 +370,11 @@ export default function SystemConfigurationPage() {
       variant: "default",
     });
   };
-  
+
   const getStatusBadgeVariant = (status: ConfiguredSocialChannel['status']): "default" | "secondary" | "destructive" | "outline" => {
-    if (status === 'Connected') return 'default'; 
-    if (status === 'Needs Re-auth') return 'destructive'; 
-    return 'secondary'; 
+    if (status === 'Connected') return 'default'; // Main theme color (blue)
+    if (status === 'Needs Re-auth') return 'destructive'; // Red
+    return 'secondary'; // Gray
   };
 
 
@@ -384,10 +386,11 @@ export default function SystemConfigurationPage() {
           <CardDescription>Manage global settings and configurations for MarketMaestro.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Tabs defaultValue="social-accounts" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-1 mb-6 h-auto">
+          <Tabs defaultValue="ai-settings" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1 mb-6 h-auto">
               <TabsTrigger value="ai-settings" className="py-2 text-xs sm:text-sm"><Cpu className="mr-1 h-4 w-4 hidden sm:inline-block"/>AI Settings</TabsTrigger>
               <TabsTrigger value="smtp-settings" className="py-2 text-xs sm:text-sm"><Mailbox className="mr-1 h-4 w-4 hidden sm:inline-block"/>SMTP Settings</TabsTrigger>
+              <TabsTrigger value="email-config" className="py-2 text-xs sm:text-sm"><Mail className="mr-1 h-4 w-4 hidden sm:inline-block"/>Email Configuration</TabsTrigger>
               <TabsTrigger value="social-accounts" className="py-2 text-xs sm:text-sm"><Share2Icon className="mr-1 h-4 w-4 hidden sm:inline-block"/>Social Accounts</TabsTrigger>
               <TabsTrigger value="user-management" className="py-2 text-xs sm:text-sm"><UsersIconLucide className="mr-1 h-4 w-4 hidden sm:inline-block"/>User Management</TabsTrigger>
               <TabsTrigger value="notifications" className="py-2 text-xs sm:text-sm"><BellIcon className="mr-1 h-4 w-4 hidden sm:inline-block"/>Notifications</TabsTrigger>
@@ -640,6 +643,32 @@ export default function SystemConfigurationPage() {
               </div>
             </TabsContent>
 
+            <TabsContent value="email-config">
+              <div className="space-y-4 p-4 border rounded-md bg-card">
+                <h3 className="text-lg font-medium mb-2 flex items-center">
+                  <Mail className="mr-2 h-5 w-5 text-primary" />
+                  Email System Settings
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Configure general email settings, default sender information, global footers, and subscription management options. (Placeholder for future options beyond SMTP server configuration).
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultFromName">Default Sender Name</Label>
+                  <Input id="defaultFromName" placeholder="Your Brand Name" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultFromEmail">Default Sender Email</Label>
+                  <Input id="defaultFromEmail" type="email" placeholder="noreply@yourbrand.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="globalEmailFooter">Global Email Footer Text/HTML (Optional)</Label>
+                  <Textarea id="globalEmailFooter" rows={3} placeholder="e.g., © 2024 Your Company. All rights reserved. 123 Main St, Anytown, USA" />
+                  <p className="text-xs text-muted-foreground">This will be appended to all marketing emails if not overridden by campaign-specific footers. Unsubscribe links are usually added automatically.</p>
+                </div>
+                 <Button onClick={() => toast({title: "Email Settings Saved", description:"General email settings saved (simulation)."})} className="mt-4">Save Email Settings</Button>
+              </div>
+            </TabsContent>
+
             <TabsContent value="social-accounts">
               <div className="space-y-4 p-4 border rounded-md bg-card">
                 <h3 className="text-lg font-medium mb-2 flex items-center">
@@ -647,8 +676,7 @@ export default function SystemConfigurationPage() {
                   Social Media Account Connections
                 </h3>
                 <p className="text-sm text-muted-foreground mb-1">
-                  Add and manage social media accounts that MarketMaestro will use for posting and analytics. 
-                  The connections here are simulated for UI demonstration purposes.
+                  Add, connect, and manage social media accounts that MarketMaestro will use for posting, analytics, and dashboard visibility. Actual account connection (OAuth, etc.) is simulated for this prototype.
                 </p>
                 <div className="space-y-2">
                     <Label htmlFor="platformCombobox">Add Platform to Manage</Label>
@@ -661,7 +689,7 @@ export default function SystemConfigurationPage() {
                           aria-expanded={openPlatformCombobox}
                           className="w-full md:w-[300px] justify-between"
                         >
-                          {platformSearchValue && availableSocialPlatforms.find(p => p.name.toLowerCase() === platformSearchValue.toLowerCase())?.name 
+                          {platformSearchValue && availableSocialPlatforms.find(p => p.name.toLowerCase() === platformSearchValue.toLowerCase())?.name
                             || "Select platform to add..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -677,11 +705,11 @@ export default function SystemConfigurationPage() {
                           <CommandList>
                             <CommandGroup>
                               {availableSocialPlatforms
-                                .filter(p => !configuredChannels.find(cp => cp.id === p.id)) 
+                                .filter(p => !configuredChannels.find(cp => cp.id === p.id))
                                 .map((platform) => (
                                 <CommandItem
                                   key={platform.id}
-                                  value={platform.name} // Ensure value is string for Command
+                                  value={platform.name}
                                   onSelect={() => {
                                     handleAddPlatformToConfiguredList(platform);
                                   }}
@@ -728,9 +756,9 @@ export default function SystemConfigurationPage() {
                                     </>
                                     )}
                                     {channel.status === 'Needs Re-auth' && (
-                                    <Button 
-                                        variant="default" 
-                                        size="sm" 
+                                    <Button
+                                        variant="default"
+                                        size="sm"
                                         onClick={() => handleToggleManageSection(channel.id)}
                                         className="bg-muted hover:bg-card border border-accent text-primary-foreground"
                                     >
@@ -743,7 +771,7 @@ export default function SystemConfigurationPage() {
                                     </Button>
                                 </div>
                             </div>
-                           
+
                             {expandedChannelId === channel.id && (
                             <div className="mt-3 pt-3 border-t border-dashed bg-muted/30 p-3 rounded-b-md animate-in fade-in duration-300">
                                 {(channel.status === 'Disconnected' || channel.status === 'Needs Re-auth') && (
@@ -751,16 +779,13 @@ export default function SystemConfigurationPage() {
                                     <h4 className="text-sm font-semibold mb-2 text-foreground">
                                         {channel.status === 'Disconnected' ? `Connect to ${channel.name}` : `Re-authenticate with ${channel.name}`}
                                     </h4>
-                                    <p className="text-xs text-muted-foreground mb-1">This will simulate an OAuth 2.0 flow.</p>
+                                    <p className="text-xs text-muted-foreground mb-1">This will simulate an OAuth 2.0 flow. We will request permissions for (example):</p>
                                     {channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0 && (
-                                      <div className="mb-3">
-                                        <p className="text-xs text-muted-foreground">We will request permissions for (example):</p>
-                                        <ul className="list-disc list-inside text-xs text-muted-foreground pl-2">
-                                          {channel.oauthPermissionsExample.map(perm => <li key={perm}>{perm}</li>)}
-                                        </ul>
-                                      </div>
+                                      <ul className="list-disc list-inside text-xs text-muted-foreground pl-2 mb-3">
+                                        {channel.oauthPermissionsExample.map(perm => <li key={perm}>{perm}</li>)}
+                                      </ul>
                                     )}
-                                    <div className="space-y-3 my-3">
+                                     <div className="space-y-3 my-3">
                                         <div>
                                             <Label htmlFor={`apiKey-${channel.id}`} className="text-xs">API Key (if applicable)</Label>
                                             <Input id={`apiKey-${channel.id}`} placeholder="Enter API Key (optional)" className="h-8 text-xs mt-0.5"/>
@@ -771,8 +796,8 @@ export default function SystemConfigurationPage() {
                                         </div>
                                         <p className="text-xs text-muted-foreground">Note: Most connections are via OAuth. Enter details above only if specifically required by the platform's alternative connection method.</p>
                                     </div>
-                                    <Button 
-                                      variant="default" 
+                                    <Button
+                                      variant="default"
                                       className="w-full"
                                       onClick={() => performConnectionAction(channel.id, channel.status === 'Disconnected' ? 'Connect' : 'Re-authenticate')}
                                     >
@@ -870,7 +895,3 @@ export default function SystemConfigurationPage() {
     </MainLayout>
   );
 }
-    
-
-    
-
