@@ -7,18 +7,25 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { 
   Users, MessageSquare, ThumbsUp, Share2, UserPlus, BarChart3, FileText, CalendarDays, Edit3, Bell, AlertCircle,
-  Instagram, Facebook, Linkedin, Youtube, Twitter as TwitterIcon, CheckCircle, UserCircle as UserCircleIcon
+  Instagram, Facebook, Linkedin, Youtube, Twitter as TwitterIcon, CheckCircle, UserCircle as UserCircleIcon,
+  LayoutDashboard, // Added for consistency
+  ImageIcon, // Added for consistency
+  Settings2, // Added for consistency
+  ListChecks, // Added for consistency
+  Spline, // Added for consistency
+  Send // Added for consistency
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // Added useEffect
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  type ChartConfig
 } from "@/components/ui/chart";
-import { Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Legend as RechartsLegend } from "recharts";
 
 const chartData = [
   { month: "Jan", engagement: 186, followers: 80 },
@@ -38,7 +45,7 @@ const chartConfig = {
     label: "New Followers",
     color: "hsl(var(--chart-2))",
   },
-} satisfies import("@/components/ui/chart").ChartConfig;
+} satisfies ChartConfig;
 
 
 // Mock data for connected accounts
@@ -69,6 +76,13 @@ type Timeframe = 'daily' | 'weekly' | 'monthly';
 
 export default function SocialMediaDashboardPage() {
   const [selectedTimeframe, setSelectedTimeframe] = React.useState<Timeframe>('weekly');
+  const [mockEngagementRate, setMockEngagementRate] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Generate random value on client side after mount
+    setMockEngagementRate(`${(Math.random() * 5 + 1).toFixed(1)}%`);
+  }, []);
+
 
   // Placeholder data - in a real app, this would change based on selectedTimeframe and API calls
   const engagementData = {
@@ -80,7 +94,7 @@ export default function SocialMediaDashboardPage() {
   };
 
   return (
-    <MainLayout pageTitle="Social Media Dashboard">
+    <MainLayout pageTitle="Social Media Hub">
       <div className="space-y-8">
         
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -96,7 +110,7 @@ export default function SocialMediaDashboardPage() {
             </Button>
             <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
               <Link href="/social-media/asset-library">
-                 Asset Library
+                 <ImageIcon className="mr-2 h-5 w-5" /> Asset Library
               </Link>
             </Button>
           </div>
@@ -192,7 +206,9 @@ export default function SocialMediaDashboardPage() {
               <CardTitle className="text-lg flex items-center"><BarChart3 className="mr-2 h-5 w-5 text-primary" /> Engagement Rate</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{(Math.random() * 5 + 1).toFixed(1)}%</p> 
+              <p className="text-3xl font-bold">
+                {mockEngagementRate !== null ? mockEngagementRate : "--%"}
+              </p> 
               <p className="text-xs text-muted-foreground capitalize">{selectedTimeframe} average</p>
             </CardContent>
           </Card>
@@ -208,7 +224,7 @@ export default function SocialMediaDashboardPage() {
                  <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                       <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                       <RechartsTooltip
@@ -216,10 +232,11 @@ export default function SocialMediaDashboardPage() {
                             backgroundColor: "hsl(var(--background))", 
                             borderColor: "hsl(var(--border))",
                             borderRadius: "var(--radius)",
-                            boxShadow: "var(--card-shadow)" 
+                            boxShadow: "var(--card-shadow, 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1))" 
                         }}
                         labelStyle={{color: "hsl(var(--foreground))"}}
                         itemStyle={{color: "hsl(var(--foreground))"}}
+                        content={<ChartTooltipContent />}
                       />
                       <ChartLegend content={<ChartLegendContent />} />
                       <Line type="monotone" dataKey="engagement" stroke="var(--color-engagement)" strokeWidth={2} dot={{r:4, fill: "var(--color-engagement)", strokeWidth:1}} activeDot={{r:6, strokeWidth:2}}/>
@@ -313,5 +330,3 @@ export default function SocialMediaDashboardPage() {
     </MainLayout>
   );
 }
-
-    
