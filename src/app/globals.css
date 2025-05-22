@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 94.1%; /* #F0F0F0 Light Grey */
+    --foreground: 240 10% 3.9%; /* Dark Grey for text */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 199 76% 53%; /* #29ABE2 Vibrant Blue */
+    --primary-foreground: 240 10% 3.9%; /* DARK TEXT for high contrast on blue */
+
+    --secondary: 240 4.8% 90%; /* Slightly darker light grey for secondary elements */
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 85%; /* Muted grey */
+    --muted-foreground: 240 5% 35%; /* DARKER GREY for high contrast on muted */
+
+    --accent: 33 100% 50%; /* #FF8C00 Warm Orange */
+    --accent-foreground: 240 10% 3.9%; /* DARK TEXT for high contrast on orange */
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 240 10% 3.9%; /* DARK TEXT for high contrast on destructive */
+
+    --border: 0 0% 87%; /* Border for cards etc. */
+    --input: 0 0% 89.8%;
+    --ring: 199 76% 53%; /* Primary color for ring */
+
+    --radius: 0.5rem;
+
+    /* Sidebar specific colors */
+    /* These are base values, potentially for a dark sidebar by default or overridden in .dark */
+    --sidebar-background: 220 15% 15%; /* Dark bluish-grey */
+    --sidebar-foreground: 220 15% 85%; /* Light grey text */
+    --sidebar-primary: 199 76% 53%; /* Vibrant blue for active item / highlight (#29ABE2) */
+    --sidebar-primary-foreground: 220 15% 10%; /* VERY DARK TEXT for high contrast on blue sidebar active item */
+    --sidebar-accent: 220 15% 25%; /* Hover background for items */
+    --sidebar-accent-foreground: 0 0% 100%; /* White hover text */
+    --sidebar-border: 220 15% 20%; /* Border color within sidebar */
+    --sidebar-ring: 199 76% 63%; /* Ring for focus within sidebar */
+    
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 5.9%; /* Darker card background */
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 199 70% 40%; /* DARKER BLUE for dark mode to work with white text */
+    --primary-foreground: 0 0% 100%; /* White text */
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%; /* This contrast was OK */
+
+    --accent: 33 100% 40%; /* DARKER ORANGE for dark mode to work with white text */
+    --accent-foreground: 0 0% 100%; /* White text */
+
+    --destructive: 0 62.8% 30.6%; /* This contrast was OK with white text */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 199 70% 40%; /* Use the darker blue for ring in dark mode */
+    
+    /* Dark Sidebar specific colors */
+    /* Overriding or confirming values for a dark theme sidebar */
+    --sidebar-background: 220 15% 10%; /* Even darker for dark mode */
+    --sidebar-foreground: 220 15% 80%;
+    --sidebar-primary: 199 70% 40%; /* DARKER BLUE for dark mode active sidebar item */
+    --sidebar-primary-foreground: 0 0% 100%; /* White text for active item */
+    --sidebar-accent: 220 15% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 15% 15%;
+    --sidebar-ring: 199 70% 50%; /* Adjusted ring to match darker primary */
+
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1; /* Enable common ligatures and contextual alternates */
+  }
+}
