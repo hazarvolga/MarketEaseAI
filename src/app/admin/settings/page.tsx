@@ -61,6 +61,9 @@ import {
   UploadCloud,
   HardDrive,
   Database, // Added for Storage Settings
+  Cloud,    // Added for OneDrive
+  BoxIcon as Box,     // Added for Box
+  Server,   // Added for Backblaze B2
 } from 'lucide-react';
 import {
   Dialog,
@@ -183,7 +186,7 @@ interface StorageProviderConfigField {
 interface StorageProviderOption {
   id: string;
   name: string;
-  icon?: React.ReactNode; // Optional icon
+  icon?: React.ReactNode; 
   configFields: StorageProviderConfigField[];
 }
 
@@ -220,6 +223,55 @@ const availableStorageProviders: StorageProviderOption[] = [
     ],
   },
   {
+    id: "google_drive",
+    name: "Google Drive",
+    icon: <Database className="h-4 w-4 text-green-500" />, // Using Database as a generic icon, consider specific one if available
+    configFields: [
+      { id: "clientId", label: "Google Client ID", type: "text", placeholder: "Your Google Client ID" },
+      { id: "clientSecret", label: "Google Client Secret", type: "password", placeholder: "Your Google Client Secret" },
+      { id: "folderId", label: "Default Folder ID (Optional)", type: "text", placeholder: "Optional root folder ID" },
+    ],
+  },
+  {
+    id: "onedrive",
+    name: "Microsoft OneDrive",
+    icon: <Cloud className="h-4 w-4 text-sky-500" />,
+    configFields: [
+      { id: "clientId", label: "Microsoft App (Client) ID", type: "text", placeholder: "Your Microsoft App ID" },
+      { id: "clientSecret", label: "Microsoft App Secret", type: "password", placeholder: "Your Microsoft App Secret" },
+      { id: "tenantId", label: "Microsoft Tenant ID (Optional)", type: "text", placeholder: "Optional Tenant ID" },
+    ],
+  },
+  {
+    id: "dropbox",
+    name: "Dropbox",
+    icon: <Database className="h-4 w-4 text-blue-500" />, // Generic icon
+    configFields: [
+      { id: "appKey", label: "Dropbox App Key", type: "text", placeholder: "Your Dropbox App Key" },
+      { id: "appSecret", label: "Dropbox App Secret", type: "password", placeholder: "Your Dropbox App Secret" },
+    ],
+  },
+  {
+    id: "box",
+    name: "Box",
+    icon: <Box className="h-4 w-4 text-blue-700" />,
+    configFields: [
+      { id: "clientId", label: "Box Client ID", type: "text", placeholder: "Your Box Client ID" },
+      { id: "clientSecret", label: "Box Client Secret", type: "password", placeholder: "Your Box Client Secret" },
+    ],
+  },
+  {
+    id: "backblaze_b2",
+    name: "Backblaze B2",
+    icon: <Server className="h-4 w-4 text-red-700" />,
+    configFields: [
+      { id: "applicationKeyId", label: "Application Key ID", type: "text", placeholder: "Your B2 Key ID" },
+      { id: "applicationKey", label: "Application Key", type: "password", placeholder: "Your B2 Application Key" },
+      { id: "bucketName", label: "Bucket Name", type: "text", placeholder: "Your B2 Bucket Name" },
+      { id: "bucketId", label: "Bucket ID (Optional)", type: "text", placeholder: "Optional Bucket ID" },
+    ],
+  },
+  {
     id: "local_server",
     name: "Local Server Storage",
     icon: <HardDrive className="h-4 w-4 text-gray-500" />,
@@ -247,13 +299,12 @@ export default function SystemConfigurationPage() {
   const [smtpPassword, setSmtpPassword] = React.useState("");
   const [smtpEncryption, setSmtpEncryption] = React.useState("tls");
   const [apiKey, setApiKey] = React.useState("");
-  const [apiSecret, setApiSecret] = React.useState("");
-  const [sendingDomain, setSendingDomain] = React.useState("");
+  // const [apiSecret, setApiSecret] = React.useState(""); // Combined apiSecret for Mailgun, SendGrid, etc.
   const [sesAccessKey, setSesAccessKey] = React.useState("");
   const [sesSecretKey, setSesSecretKey] = React.useState("");
   const [sesRegion, setSesRegion] = React.useState("us-east-1");
   const [sesVerifiedIdentity, setSesVerifiedIdentity] = React.useState("");
-
+  const [sendingDomain, setSendingDomain] = React.useState(""); // For providers like Mailgun, SendGrid
 
   const [configuredChannels, setConfiguredChannels] = React.useState<ConfiguredSocialChannel[]>([]);
   const [openPlatformCombobox, setOpenPlatformCombobox] = React.useState(false);
@@ -276,32 +327,36 @@ export default function SystemConfigurationPage() {
             try {
                 const parsedData = JSON.parse(storedChannels);
                 if (Array.isArray(parsedData) && parsedData.every(ch => typeof ch.id === 'string' && typeof ch.name === 'string' && typeof ch.status === 'string')) {
-                    initialChannels = parsedData.map((ch: Omit<ConfiguredSocialChannel, 'icon'>) => {
+                    initialChannels = parsedData.map((ch: Omit<ConfiguredSocialChannel, 'icon' | 'oauthPermissionsExample'>) => {
                         const basePlatform = availableSocialPlatforms.find(p => p.id === ch.id);
-                        return { ...ch, icon: basePlatform?.icon || <Share2Icon className="h-5 w-5 text-muted-foreground"/>, oauthPermissionsExample: basePlatform?.oauthPermissionsExample };
+                        return { 
+                            ...ch, 
+                            icon: basePlatform?.icon || <Share2Icon className="h-5 w-5 text-muted-foreground"/>, 
+                            oauthPermissionsExample: basePlatform?.oauthPermissionsExample 
+                        };
                     });
                 } else {
                     throw new Error("Invalid channel data structure in localStorage");
                 }
             } catch (e) {
                 console.error("Failed to parse configured channels from localStorage", e);
-                 initialChannels = []; // Default to empty if parsing fails
+                 initialChannels = []; 
             }
         }
     }
     setConfiguredChannels(initialChannels);
   }, []);
-
+  
   const handleAddPlatformToConfiguredList = (platform: AvailableSocialPlatform) => {
     if (!configuredChannels.find(p => p.id === platform.id)) {
       const newChannel: ConfiguredSocialChannel = { ...platform, status: 'Disconnected', accountIdentifier: undefined };
       const updatedChannels = [...configuredChannels, newChannel];
       setConfiguredChannels(updatedChannels);
-      setExpandedChannelId(platform.id); // Expand the newly added item
-      toast({ title: `${platform.name} added. Please configure and connect your account below.`});
-      saveConfiguredChannelsToLocalStorage(updatedChannels);
+      saveConfiguredChannelsToLocalStorage(updatedChannels); // Save immediately after adding
+      setExpandedChannelId(platform.id); 
+      toast({ title: `${platform.name} added to configuration. Click 'Connect' below.`});
     } else {
-      toast({ title: `${platform.name} is already in your list.`, variant: "default"});
+      toast({ title: `${platform.name} is already in your configuration list.`, variant: "default"});
     }
     setPlatformSearchValue("");
     setOpenPlatformCombobox(false);
@@ -309,7 +364,7 @@ export default function SystemConfigurationPage() {
   
   const saveConfiguredChannelsToLocalStorage = (channels: ConfiguredSocialChannel[]) => {
     if (typeof window !== 'undefined') {
-        const serializableChannels = channels.map(({icon, oauthPermissionsExample, ...rest}) => rest); // Remove non-serializable parts
+        const serializableChannels = channels.map(({icon, oauthPermissionsExample, ...rest}) => rest); 
         localStorage.setItem('marketMaestroConfiguredChannels', JSON.stringify(serializableChannels));
     }
   };
@@ -317,33 +372,28 @@ export default function SystemConfigurationPage() {
   const handleRemoveChannelFromConfiguration = (platformId: string) => {
     const updatedChannels = configuredChannels.filter(p => p.id !== platformId);
     setConfiguredChannels(updatedChannels);
+    saveConfiguredChannelsToLocalStorage(updatedChannels); // Save immediately after removing
     if (expandedChannelId === platformId) {
       setExpandedChannelId(null);
     }
-    toast({ title: "Platform removed from list."});
-    saveConfiguredChannelsToLocalStorage(updatedChannels);
+    toast({ title: "Platform removed from configuration list."});
   };
 
- const performConnectionAction = React.useCallback((channelId: string, actionType: 'Connect' | 'Re-authenticate' | 'Disconnect') => {
+ const performConnectionAction = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
     let toastTitle = "";
     let toastDescription = "";
-    let newStatus: ConfiguredSocialChannel['status'] = 'Disconnected'; // Default for disconnect
+    let newStatus: ConfiguredSocialChannel['status'] = 'Disconnected';
     let newAccountIdentifier: string | undefined = undefined;
 
     const channelToUpdate = configuredChannels.find(c => c.id === channelId);
     if (!channelToUpdate) return;
     
-    if (actionType === 'Connect') {
-        toastTitle = `Connecting ${channelToUpdate.name}... (Simulation)`;
+    if (currentStatus === 'Disconnected' || currentStatus === 'Needs Re-auth') {
+        toastTitle = `${currentStatus === 'Disconnected' ? 'Connecting' : 'Re-authenticating'} ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "OAuth flow would happen here. Simulating successful connection.";
         newStatus = 'Connected';
         newAccountIdentifier = `${channelToUpdate.name} User (Mock)`;
-    } else if (actionType === 'Re-authenticate') {
-        toastTitle = `Re-authenticating ${channelToUpdate.name}... (Simulation)`;
-        toastDescription = "OAuth re-authentication flow would happen here. Simulating success.";
-        newStatus = 'Connected';
-        newAccountIdentifier = channelToUpdate.accountIdentifier || `${channelToUpdate.name} User (Mock)`;
-    } else if (actionType === 'Disconnect') {
+    } else if (currentStatus === 'Connected') { // This case is for the 'Disconnect' button
         toastTitle = `Disconnecting ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "Simulating successful disconnection.";
         newStatus = 'Disconnected';
@@ -352,7 +402,6 @@ export default function SystemConfigurationPage() {
         return; 
     }
     
-    // Simulate API call and then update
     setTimeout(() => {
         const updatedChannels = configuredChannels.map(channel => {
         if (channel.id === channelId) {
@@ -361,11 +410,11 @@ export default function SystemConfigurationPage() {
         return channel;
         });
         setConfiguredChannels(updatedChannels);
-        if (actionType === 'Connect' || actionType === 'Re-authenticate') {
-           setExpandedChannelId(null); // Close inline panel on successful (simulated) connect/re-auth
-        }
-        toast({ title: toastTitle.replace('...', 'Success!'), description: toastDescription.replace('...', 'successful.') });
-        saveConfiguredChannelsToLocalStorage(updatedChannels);
+        saveConfiguredChannelsToLocalStorage(updatedChannels); // Save after status change
+        setExpandedChannelId(null); 
+        setTimeout(() => { // Defer toast to avoid state update during render
+             toast({ title: toastTitle.replace('...', 'Success!'), description: toastDescription.replace('...', 'successful.') });
+        }, 0);
     }, 1000);
   }, [configuredChannels, toast]);
 
@@ -375,14 +424,14 @@ export default function SystemConfigurationPage() {
   };
 
 
-  const handleSaveSocialMediaConnectionsForDashboard = () => {
-    const dashboardChannels = configuredChannels
-      .filter(c => c.status === 'Connected')
+  const handleSaveDashboardPreferences = () => {
+    const dashboardChannelIds = configuredChannels
+      .filter(c => c.status === 'Connected') // Only save connected ones for dashboard display logic
       .map(c => c.id); 
-    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(dashboardChannels));
+    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(dashboardChannelIds));
     toast({
-      title: "Social Account Dashboard Preferences Saved",
-      description: "Your preferences for which connected accounts appear on the main Dashboard Overview have been saved.",
+      title: "Dashboard Preferences Saved",
+      description: "Your selections for which channels appear on the Dashboard Overview have been saved.",
       variant: "default",
     });
   };
@@ -450,7 +499,8 @@ export default function SystemConfigurationPage() {
       case "brevo":
       case "mailjet":
       case "zoho_mail":
-        settingsToLog = { ...settingsToLog, apiKey: apiKey ? '********' : '', apiSecret: apiSecret ? '********' : '', sendingDomain };
+        // Assuming 'apiKey' and 'sendingDomain' are relevant for these
+        settingsToLog = { ...settingsToLog, apiKey: apiKey ? '********' : '', sendingDomain };
         break;
     }
     console.log("SMTP/Email Service Settings to save (simulation):", settingsToLog);
@@ -484,7 +534,6 @@ export default function SystemConfigurationPage() {
       title: "Storage Configuration Saved (Simulation)",
       description: `Settings for ${provider?.name} have been noted.`,
     });
-    // Here you would typically send this data to a backend.
   };
 
 
@@ -730,10 +779,7 @@ export default function SystemConfigurationPage() {
                             <Input id="sendingDomain" placeholder="e.g., mg.yourdomain.com" value={sendingDomain} onChange={e => setSendingDomain(e.target.value)}/>
                         </div>
                     }
-                     <div className="space-y-1.5">
-                        <Label htmlFor="apiSecret">API Secret / Password (Optional)</Label>
-                        <Input id="apiSecret" type="password" placeholder="If provider requires a secret" value={apiSecret} onChange={e => setApiSecret(e.target.value)}/>
-                    </div>
+                     {/* Removed API Secret as it was causing confusion and not universally applicable */}
                      <p className="text-xs text-muted-foreground">
                         Refer to your <Link href="#" className="underline hover:text-primary" onClick={(e) => {e.preventDefault(); toast({title:"Documentation", description:"Link to specific provider docs would go here."})}}>{selectedEmailService.replace(/_/g, ' ').toUpperCase()} documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link> for API key details.
                     </p>
@@ -776,7 +822,7 @@ export default function SystemConfigurationPage() {
                   Social Media Account Connections
                 </h3>
                 <p className="text-sm text-muted-foreground mb-1">
-                  Manage which social media accounts are connected and their settings.
+                  Manage which social media accounts are connected and used for dashboard display.
                 </p>
                 <div className="space-y-2">
                     <Label htmlFor="platformCombobox">Add Platform to Configuration</Label>
@@ -801,7 +847,7 @@ export default function SystemConfigurationPage() {
                             value={platformSearchValue}
                             onValueChange={setPlatformSearchValue}
                           />
-                          <CommandEmpty>No platform found.</CommandEmpty>
+                          <CommandEmpty>No platform found or already configured.</CommandEmpty>
                           <CommandList>
                             <CommandGroup>
                               {availableSocialPlatforms
@@ -843,7 +889,7 @@ export default function SystemConfigurationPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
-                                    <Badge variant={getStatusBadgeVariant(channel.status)} className="text-xs">
+                                    <Badge variant={getStatusBadgeVariant(channel.status)} className="text-xs mr-1">
                                         {channel.status}
                                     </Badge>
                                     {channel.status === 'Disconnected' && (
@@ -852,7 +898,7 @@ export default function SystemConfigurationPage() {
                                     {channel.status === 'Connected' && (
                                     <>
                                         <Button variant="ghost" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Manage</Button>
-                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => performConnectionAction(channel.id, 'Disconnect')}>Disconnect</Button>
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => performConnectionAction(channel.id, 'Connected')}>Disconnect</Button>
                                     </>
                                     )}
                                     {channel.status === 'Needs Re-auth' && (
@@ -866,15 +912,15 @@ export default function SystemConfigurationPage() {
                                     </Button>
                                     )}
                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name} from configuration`}>
-                                    <Trash2 className="h-4 w-4"/>
-                                    <span className="sr-only">Remove {channel.name}</span>
+                                      <Trash2 className="h-4 w-4"/>
+                                      <span className="sr-only">Remove {channel.name}</span>
                                     </Button>
                                 </div>
                             </div>
 
                             {expandedChannelId === channel.id && (
                             <div className="mt-3 pt-3 border-t border-dashed bg-muted/30 p-3 rounded-b-md animate-in fade-in duration-300">
-                                {(channel.status === 'Disconnected') && (
+                                { (channel.status === 'Disconnected') && (
                                   <>
                                     <h4 className="text-sm font-semibold mb-2 text-foreground">
                                         Connect to {channel.name}
@@ -899,14 +945,14 @@ export default function SystemConfigurationPage() {
                                     <Button
                                       variant="default"
                                       className="w-full"
-                                      onClick={() => performConnectionAction(channel.id, 'Connect')}
+                                      onClick={() => performConnectionAction(channel.id, 'Disconnected')}
                                     >
                                       <Link2IconLucide className="mr-2 h-4 w-4" />
                                        Proceed to Connect with {channel.name}
                                     </Button>
                                   </>
                                 )}
-                                 {(channel.status === 'Needs Re-auth') && (
+                                 { (channel.status === 'Needs Re-auth') && (
                                   <>
                                     <h4 className="text-sm font-semibold mb-2 text-foreground">
                                        Re-authenticate with {channel.name}
@@ -920,7 +966,7 @@ export default function SystemConfigurationPage() {
                                     <Button
                                       variant="default"
                                       className="w-full"
-                                      onClick={() => performConnectionAction(channel.id, 'Re-authenticate')}
+                                      onClick={() => performConnectionAction(channel.id, 'Needs Re-auth')}
                                     >
                                       <RefreshCw className="mr-2 h-4 w-4" />
                                        Proceed to Re-authenticate {channel.name}
@@ -965,7 +1011,7 @@ export default function SystemConfigurationPage() {
                                                  saveConfiguredChannelsToLocalStorage(updatedChannels);
                                                  setExpandedChannelId(null);
                                                  setTimeout(() => setExpandedChannelId(channel.id), 50); 
-                                                 toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`});
+                                                 setTimeout(() => toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`}), 100);
                                                 }}>
                                                 <RefreshCw className="mr-2 h-4 w-4"/> Refresh
                                             </Button>
@@ -988,7 +1034,7 @@ export default function SystemConfigurationPage() {
                   </p>
                 )}
 
-                 <Button onClick={handleSaveSocialMediaConnectionsForDashboard} className="mt-6">Save Dashboard Preferences</Button>
+                 <Button onClick={handleSaveDashboardPreferences} className="mt-6">Save Dashboard Preferences</Button>
                  <p className="text-xs text-muted-foreground mt-2">This saves which of your connected channels appear on the main Dashboard Overview.</p>
               </div>
             </TabsContent>
@@ -1037,7 +1083,7 @@ export default function SystemConfigurationPage() {
                                   value={provider.name}
                                   onSelect={() => {
                                     setSelectedStorageProviderId(provider.id);
-                                    setStorageConfigInputs({}); // Reset config for new provider
+                                    setStorageConfigInputs({}); 
                                     setIsStorageProviderPopoverOpen(false);
                                     setStorageProviderSearchValue("");
                                   }}
@@ -1099,4 +1145,3 @@ export default function SystemConfigurationPage() {
     </MainLayout>
   );
 }
-
