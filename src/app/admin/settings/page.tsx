@@ -59,7 +59,7 @@ import {
   FileText,
   Filter,
   UploadCloud,
-  HardDrive // Added HardDrive icon
+  HardDrive
 } from 'lucide-react';
 import {
   Dialog,
@@ -81,6 +81,7 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import Link from "next/link";
 
 
 interface CustomIconProps extends React.SVGProps<SVGSVGElement> {}
@@ -188,8 +189,8 @@ export default function SystemConfigurationPage() {
   const [smtpPassword, setSmtpPassword] = React.useState("");
   const [smtpEncryption, setSmtpEncryption] = React.useState("tls");
   const [apiKey, setApiKey] = React.useState("");
-  const [apiSecret, setApiSecret] = React.useState(""); // Used for API key based services
-  const [sendingDomain, setSendingDomain] = React.useState(""); // Used for some API key based services
+  const [apiSecret, setApiSecret] = React.useState(""); 
+  const [sendingDomain, setSendingDomain] = React.useState(""); 
   const [sesAccessKey, setSesAccessKey] = React.useState("");
   const [sesSecretKey, setSesSecretKey] = React.useState("");
   const [sesRegion, setSesRegion] = React.useState("us-east-1");
@@ -205,12 +206,24 @@ export default function SystemConfigurationPage() {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    const initialChannels: ConfiguredSocialChannel[] = [
-      { id: 'facebook', name: 'Facebook', icon: <FacebookIconSVG className="h-5 w-5 text-blue-600" />, status: 'Connected', accountIdentifier: 'MarketMaestro FB Page', oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='facebook')?.oauthPermissionsExample },
-      { id: 'instagram', name: 'Instagram', icon: <InstagramIconSVG className="h-5 w-5 text-pink-500" />, status: 'Connected', accountIdentifier: '@MarketMaestroIG', oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='instagram')?.oauthPermissionsExample },
-      { id: 'twitter', name: 'X (Twitter)', icon: <TwitterIconSVG className="h-5 w-5" />, status: 'Needs Re-auth', accountIdentifier: '@MarketMaestroX', oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='twitter')?.oauthPermissionsExample },
-    ];
-    // In a real app, this would be fetched from a backend
+    let initialChannels: ConfiguredSocialChannel[] = [];
+    if (typeof window !== 'undefined') {
+        const storedChannels = localStorage.getItem('marketMaestroConfiguredChannels');
+        if (storedChannels) {
+            try {
+                initialChannels = JSON.parse(storedChannels);
+            } catch (e) {
+                console.error("Failed to parse configured channels from localStorage", e);
+                 initialChannels = [ // Fallback if parsing fails or no data
+                    { id: 'facebook', name: 'Facebook', icon: <FacebookIconSVG className="h-5 w-5 text-blue-600" />, status: 'Disconnected', accountIdentifier: undefined, oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='facebook')?.oauthPermissionsExample },
+                 ];
+            }
+        } else {
+             initialChannels = [
+                { id: 'facebook', name: 'Facebook', icon: <FacebookIconSVG className="h-5 w-5 text-blue-600" />, status: 'Disconnected', accountIdentifier: undefined, oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='facebook')?.oauthPermissionsExample },
+             ];
+        }
+    }
     setConfiguredChannels(initialChannels);
   }, []);
 
@@ -221,64 +234,72 @@ export default function SystemConfigurationPage() {
       setConfiguredChannels(updatedChannels);
       setExpandedChannelId(platform.id); 
       toast({ title: `${platform.name} added. Please connect your account below.`});
+      saveConfiguredChannelsToLocalStorage(updatedChannels);
     } else {
       toast({ title: `${platform.name} is already in your list.`, variant: "default"});
     }
     setPlatformSearchValue(""); 
     setOpenPlatformCombobox(false); 
   };
+  
+  const saveConfiguredChannelsToLocalStorage = (channels: ConfiguredSocialChannel[]) => {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('marketMaestroConfiguredChannels', JSON.stringify(channels));
+    }
+  };
 
   const handleRemoveChannelFromConfiguration = (platformId: string) => {
-    setConfiguredChannels(prev => prev.filter(p => p.id !== platformId));
+    const updatedChannels = configuredChannels.filter(p => p.id !== platformId);
+    setConfiguredChannels(updatedChannels);
     if (expandedChannelId === platformId) {
       setExpandedChannelId(null);
     }
     toast({ title: "Platform removed from list."});
+    saveConfiguredChannelsToLocalStorage(updatedChannels);
   };
 
-  const performConnectionAction = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
-      let newStatus: ConfiguredSocialChannel['status'] = 'Connected';
-      let toastTitle = "";
-      let toastDescription = "";
+  const performConnectionAction = React.useCallback((channelId: string, actionType: 'Connect' | 'Re-authenticate') => {
+    let toastTitle = "";
+    let toastDescription = "";
+    let newStatus: ConfiguredSocialChannel['status'] = 'Connected';
 
-      if (currentStatus === 'Disconnected') {
-        toastTitle = `Connecting ${configuredChannels.find(c=>c.id===channelId)?.name}... (Simulation)`;
+    const channelToUpdate = configuredChannels.find(c => c.id === channelId);
+    if (!channelToUpdate) return;
+
+    if (actionType === 'Connect') {
+        toastTitle = `Connecting ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "OAuth flow would happen here. Simulating successful connection.";
-        newStatus = 'Connected';
-      } else if (currentStatus === 'Needs Re-auth') {
-        toastTitle = `Re-authenticating ${configuredChannels.find(c=>c.id===channelId)?.name}... (Simulation)`;
+    } else if (actionType === 'Re-authenticate') {
+        toastTitle = `Re-authenticating ${channelToUpdate.name}... (Simulation)`;
         toastDescription = "OAuth re-authentication flow would happen here. Simulating success.";
-        newStatus = 'Connected';
-      }
-      
-      // Simulate API call and then update
-      setTimeout(() => {
-        setConfiguredChannels(prev =>
-          prev.map(channel => {
-            if (channel.id === channelId) {
-                return { ...channel, status: newStatus, accountIdentifier: channel.accountIdentifier || `${channel.name} User (Mock)` };
-            }
-            return channel;
-          })
-        );
+    }
+    
+    // Simulate API call and then update
+    setTimeout(() => {
+        const updatedChannels = configuredChannels.map(channel => {
+        if (channel.id === channelId) {
+            return { ...channel, status: newStatus, accountIdentifier: channel.accountIdentifier || `${channel.name} User (Mock)` };
+        }
+        return channel;
+        });
+        setConfiguredChannels(updatedChannels);
         setExpandedChannelId(null); // Close panel after action
         toast({ title: toastTitle.replace('...', 'Success!'), description: toastDescription.replace('...', 'successful.') });
-      }, 1000);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast, configuredChannels]);
+        saveConfiguredChannelsToLocalStorage(updatedChannels);
+    }, 1000);
+  }, [configuredChannels, toast]);
 
 
   const handleDisconnectChannel = (channelId: string) => {
-    setConfiguredChannels(prev =>
-      prev.map(channel =>
+    const updatedChannels = configuredChannels.map(channel =>
         channel.id === channelId ? { ...channel, status: 'Disconnected', accountIdentifier: undefined } : channel
-      )
     );
+    setConfiguredChannels(updatedChannels);
     if (expandedChannelId === channelId) {
         setExpandedChannelId(null);
     }
     toast({ title: "Channel disconnected (simulation)." });
+    saveConfiguredChannelsToLocalStorage(updatedChannels);
   };
 
   const handleToggleManageSection = (channelId: string) => {
@@ -286,12 +307,13 @@ export default function SystemConfigurationPage() {
   };
 
 
-  const handleSaveSocialMediaConnections = () => {
-    // For prototype, save the currently "configured" channels to localStorage to influence dashboard
-    const channelsForDashboard = configuredChannels.filter(c => c.status === 'Connected').map(c => c.id);
+  const handleSaveSocialMediaConnectionsForDashboard = () => {
+    const channelsForDashboard = configuredChannels
+        .filter(c => c.status === 'Connected')
+        .map(c => c.id);
     localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(channelsForDashboard));
     toast({
-      title: "Social Account Preferences Saved",
+      title: "Social Account Dashboard Preferences Saved",
       description: "Your preferences for dashboard visibility have been saved.",
       variant: "default",
     });
@@ -387,13 +409,12 @@ export default function SystemConfigurationPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <Tabs defaultValue="ai-settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-7 gap-1 mb-6 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-1 mb-6 h-auto">
               <TabsTrigger value="ai-settings" className="py-2 text-xs sm:text-sm"><Cpu className="mr-1 h-4 w-4 hidden sm:inline-block"/>AI Settings</TabsTrigger>
               <TabsTrigger value="smtp-settings" className="py-2 text-xs sm:text-sm"><Mailbox className="mr-1 h-4 w-4 hidden sm:inline-block"/>SMTP Settings</TabsTrigger>
               <TabsTrigger value="email-config" className="py-2 text-xs sm:text-sm"><Mail className="mr-1 h-4 w-4 hidden sm:inline-block"/>Email Config</TabsTrigger>
               <TabsTrigger value="social-accounts" className="py-2 text-xs sm:text-sm"><Share2Icon className="mr-1 h-4 w-4 hidden sm:inline-block"/>Social Accounts</TabsTrigger>
               <TabsTrigger value="storage-settings" className="py-2 text-xs sm:text-sm"><HardDrive className="mr-1 h-4 w-4 hidden sm:inline-block"/>Storage Settings</TabsTrigger>
-              <TabsTrigger value="user-management" className="py-2 text-xs sm:text-sm"><UsersIconLucide className="mr-1 h-4 w-4 hidden sm:inline-block"/>User Management</TabsTrigger>
               <TabsTrigger value="notifications" className="py-2 text-xs sm:text-sm"><BellIcon className="mr-1 h-4 w-4 hidden sm:inline-block"/>Notifications</TabsTrigger>
             </TabsList>
 
@@ -668,10 +689,10 @@ export default function SystemConfigurationPage() {
                   Social Media Account Connections
                 </h3>
                 <p className="text-sm text-muted-foreground mb-1">
-                  Manage which social media accounts are connected and their settings. Changes saved here can influence dashboard visibility.
+                  Manage which social media accounts are connected and their settings. Channels selected here will be reflected in the dashboard overview.
                 </p>
                 <div className="space-y-2">
-                    <Label htmlFor="platformCombobox">Add Platform to Manage</Label>
+                    <Label htmlFor="platformCombobox">Add Platform to Configuration</Label>
                     <Popover open={openPlatformCombobox} onOpenChange={setOpenPlatformCombobox}>
                       <PopoverTrigger asChild>
                         <Button
@@ -705,7 +726,7 @@ export default function SystemConfigurationPage() {
                                   onSelect={() => {
                                     handleAddPlatformToConfiguredList(platform);
                                   }}
-                                  className="flex items-center gap-2"
+                                  className="flex items-center gap-2 cursor-pointer"
                                 >
                                   {platform.icon}
                                   {platform.name}
@@ -757,7 +778,7 @@ export default function SystemConfigurationPage() {
                                         Re-authenticate
                                     </Button>
                                     )}
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name}`}>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name} from configuration`}>
                                     <Trash2 className="h-4 w-4"/>
                                     <span className="sr-only">Remove {channel.name}</span>
                                     </Button>
@@ -791,7 +812,7 @@ export default function SystemConfigurationPage() {
                                     <Button
                                       variant="default"
                                       className="w-full"
-                                      onClick={() => performConnectionAction(channel.id, channel.status)}
+                                      onClick={() => performConnectionAction(channel.id, channel.status === 'Disconnected' ? 'Connect' : 'Re-authenticate')}
                                     >
                                       {channel.status === 'Disconnected' ? <Link2IconLucide className="mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                                        Proceed to {channel.status === 'Disconnected' ? `Connect with ${channel.name}` : `Re-authenticate ${channel.name}`}
@@ -830,7 +851,14 @@ export default function SystemConfigurationPage() {
                                             <p className="text-xs text-muted-foreground">For advanced users with specific API needs (not functional).</p>
                                         </div>
                                         <div className="flex justify-end gap-2 pt-2">
-                                            <Button type="button" variant="outline" size="sm" onClick={() => toast({ title: "Refresh Connection (Simulated)", description: `Attempting to refresh connection for ${channel.name}...`})}>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => {
+                                                 const updatedChannels = configuredChannels.map(c => c.id === channel.id ? {...c, status: 'Needs Re-auth'} : c);
+                                                 setConfiguredChannels(updatedChannels);
+                                                 saveConfiguredChannelsToLocalStorage(updatedChannels);
+                                                 setExpandedChannelId(null);
+                                                 setTimeout(() => setExpandedChannelId(channel.id), 50); // Re-open to show re-auth state
+                                                 toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`});
+                                                }}>
                                                 <RefreshCw className="mr-2 h-4 w-4"/> Refresh
                                             </Button>
                                             <Button type="button" variant="outline" size="sm" onClick={() => toast({ title: "View Platform Settings (Simulated)", description: `Opening ${channel.name} settings (not implemented).`})}>
@@ -852,8 +880,8 @@ export default function SystemConfigurationPage() {
                   </p>
                 )}
 
-                 <Button onClick={handleSaveSocialMediaConnections} className="mt-6">Save Dashboard Preferences</Button>
-                 <p className="text-xs text-muted-foreground mt-2">This saves which channels (and their connection status) are considered for dashboard visibility and posting. Only 'Connected' channels will be fully active.</p>
+                 <Button onClick={handleSaveSocialMediaConnectionsForDashboard} className="mt-6">Save Dashboard Preferences</Button>
+                 <p className="text-xs text-muted-foreground mt-2">This saves which of your *connected* channels appear on the main Dashboard Overview. Only 'Connected' channels can be selected for dashboard visibility here, and only 'Connected' channels will actually fetch data or allow posting in a real application.</p>
               </div>
             </TabsContent>
 
@@ -883,20 +911,7 @@ export default function SystemConfigurationPage() {
                 <Button variant="outline" disabled>Configure Storage</Button>
               </div>
             </TabsContent>
-
-            <TabsContent value="user-management">
-              <div className="space-y-4 p-4 border rounded-md bg-card">
-                <h3 className="text-lg font-medium mb-2 flex items-center">
-                  <UsersIconLucide className="h-5 w-5 mr-2 text-primary" />
-                  User Management
-                </h3>
-                <Button variant="outline" onClick={() => window.location.href='/admin/team-management'}>
-                  Go to Team Management Page
-                </Button>
-                 <p className="text-xs text-muted-foreground mt-1">Invite, remove, and manage roles for team members who can access this MarketMaestro instance.</p>
-              </div>
-            </TabsContent>
-
+            
             <TabsContent value="notifications">
               <div className="space-y-4 p-4 border rounded-md bg-card">
                 <h3 className="text-lg font-medium mb-2 flex items-center">
