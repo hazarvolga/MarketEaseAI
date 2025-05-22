@@ -10,7 +10,7 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle, 
-  CardFooter // Ensure CardFooter is imported
+  CardFooter
 } from '@/components/ui/card';
 import { PlusCircle, ListFilter, Search, Spline as SplineIcon, Sparkles, Lightbulb } from 'lucide-react'; 
 import Link from 'next/link';
@@ -28,14 +28,28 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
-// Mock data for segments
-const segmentsMock = [
+interface Segment {
+  id: string;
+  name: string;
+  criteria: string;
+  contactsCount: number;
+  creationDate: string;
+}
+
+const initialSegmentsMock: Segment[] = [
   { id: '1', name: 'Active Users (Last 30 Days)', criteria: 'Last login < 30 days AGO AND open rate > 10%', contactsCount: 450, creationDate: '2023-08-01' },
   { id: '2', name: 'Construction Industry Newsletter', criteria: 'Industry = Construction AND List = Newsletter Subscribers', contactsCount: 320, creationDate: '2023-07-15' },
   { id: '3', name: 'Low Engagement Subscribers', criteria: 'No opens in last 3 campaigns', contactsCount: 150, creationDate: '2023-09-05' },
 ];
 
-const mockAiSegmentSuggestions = [
+interface AiSegmentSuggestion {
+  id: string;
+  name: string;
+  description: string;
+  criteriaExample: string;
+}
+
+const mockAiSegmentSuggestions: AiSegmentSuggestion[] = [
   { id: 'ai_seg_1', name: "Highly Engaged Email Readers", description: "Contacts who opened your last 3 campaigns and clicked at least one link.", criteriaExample: "Opened last 3 campaigns AND Clicked > 0 links in last 3 campaigns" },
   { id: 'ai_seg_2', name: "Potential Leads for 'ArchModeler Pro'", description: "Contacts who visited 'ArchModeler Pro' product page but haven't purchased.", criteriaExample: "Visited page '/products/archmodeler-pro' AND Not in 'Customers' list" },
   { id: 'ai_seg_3', name: "New Subscribers - Welcome Series Candidates", description: "Contacts added in the last 7 days who haven't received the welcome series.", criteriaExample: "Subscription date < 7 days AGO AND Not in 'Welcome Series Completed' segment" },
@@ -45,15 +59,24 @@ const mockAiSegmentSuggestions = [
 export default function SegmentsPage() {
   const [isAiSuggestModalOpen, setIsAiSuggestModalOpen] = useState(false);
   const { toast } = useToast();
+  const [segments, setSegments] = useState<Segment[]>(initialSegmentsMock);
 
-  const handleCreateSegmentFromSuggestion = (suggestionName: string) => {
+  const handleCreateSegmentFromSuggestion = (suggestion: AiSegmentSuggestion) => {
+    const newSegment: Segment = {
+      id: `seg-${Date.now()}-${Math.random().toString(36).substring(7)}`, // More unique ID
+      name: suggestion.name,
+      criteria: suggestion.criteriaExample,
+      contactsCount: Math.floor(Math.random() * 300) + 20, // Random count for demo
+      creationDate: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD format
+    };
+
+    setSegments(prevSegments => [newSegment, ...prevSegments]); // Add to the beginning of the list
+
     toast({
-      title: "Create Segment (Simulation)",
-      description: `Creating segment based on suggestion: "${suggestionName}". This would typically pre-fill the segment creation form.`,
+      title: "Segment Created (Simulation)",
+      description: `Segment "${suggestion.name}" created from AI suggestion and added to the list.`,
     });
     setIsAiSuggestModalOpen(false);
-    // In a real app, you might redirect to /email-marketing/segments/create with pre-filled data
-    // router.push(`/email-marketing/segments/create?basedOn=${suggestionName}`);
   };
 
   return (
@@ -97,7 +120,7 @@ export default function SegmentsPage() {
                           size="sm" 
                           variant="outline" 
                           className="ml-auto"
-                          onClick={() => handleCreateSegmentFromSuggestion(suggestion.name)}
+                          onClick={() => handleCreateSegmentFromSuggestion(suggestion)}
                         >
                           Use this Idea
                         </Button>
@@ -124,7 +147,7 @@ export default function SegmentsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>All Segments ({segmentsMock.length})</CardTitle>
+            <CardTitle>All Segments ({segments.length})</CardTitle>
             <div className="flex flex-col sm:flex-row gap-2 mt-2">
               <div className="relative flex-grow">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -136,7 +159,7 @@ export default function SegmentsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {segmentsMock.length > 0 ? (
+            {segments.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-border">
                   <thead className="bg-muted/50">
@@ -149,7 +172,7 @@ export default function SegmentsPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-background divide-y divide-border">
-                    {segmentsMock.map((segment) => (
+                    {segments.map((segment) => (
                       <tr key={segment.id} className="hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-foreground">{segment.name}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground max-w-xs truncate" title={segment.criteria}>{segment.criteria}</td>
@@ -172,7 +195,7 @@ export default function SegmentsPage() {
               <div className="text-center py-12">
                 <SplineIcon className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-2 text-sm font-medium text-foreground">No segments found</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Create a new segment to get started.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Create a new segment or use AI suggestions to get started.</p>
               </div>
             )}
           </CardContent>
@@ -181,3 +204,5 @@ export default function SegmentsPage() {
     </MainLayout>
   );
 }
+
+    
