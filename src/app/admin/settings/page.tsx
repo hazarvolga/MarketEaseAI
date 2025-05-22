@@ -37,7 +37,6 @@ import {
   Paperclip,
   Settings2,
   BarChart3,
-  Users as UsersIcon, // Re-added for TeamManagement Link
   ListChecks as ListChecksIcon,
   Spline as SplineIcon,
   Send as SendIcon,
@@ -46,7 +45,7 @@ import {
   Lightbulb,
   PanelLeft,
   UserCircle,
-  Mail, // Added Mail for new tab
+  Mail,
   MailPlus,
   Edit3,
   CalendarDays,
@@ -59,7 +58,8 @@ import {
   Video,
   FileText,
   Filter,
-  UploadCloud
+  UploadCloud,
+  HardDrive // Added HardDrive icon
 } from 'lucide-react';
 import {
   Dialog,
@@ -152,9 +152,13 @@ const availableSocialPlatforms: AvailableSocialPlatform[] = [
   { id: 'youtube', name: 'YouTube', icon: <Youtube className="h-5 w-5 text-red-500" />, oauthPermissionsExample: ['youtube.readonly', 'youtube.upload'] },
 ];
 
-interface ConfiguredSocialChannel extends AvailableSocialPlatform {
+interface ConfiguredSocialChannel {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
   status: 'Connected' | 'Disconnected' | 'Needs Re-auth';
   accountIdentifier?: string;
+  oauthPermissionsExample?: string[];
 }
 
 const awsRegions = [
@@ -165,7 +169,7 @@ const awsRegions = [
   "eu-south-1", "eu-west-3", "eu-north-1", "me-south-1", "sa-east-1"
 ];
 
-const LOCAL_STORAGE_CONFIGURED_CHANNELS_KEY = 'marketMaestroConfiguredSocialChannels';
+const LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY = 'marketMaestroDashboardChannels';
 
 
 export default function SystemConfigurationPage() {
@@ -184,12 +188,13 @@ export default function SystemConfigurationPage() {
   const [smtpPassword, setSmtpPassword] = React.useState("");
   const [smtpEncryption, setSmtpEncryption] = React.useState("tls");
   const [apiKey, setApiKey] = React.useState("");
-  const [apiSecret, setApiSecret] = React.useState("");
-  const [sendingDomain, setSendingDomain] = React.useState("");
+  const [apiSecret, setApiSecret] = React.useState(""); // Used for API key based services
+  const [sendingDomain, setSendingDomain] = React.useState(""); // Used for some API key based services
   const [sesAccessKey, setSesAccessKey] = React.useState("");
   const [sesSecretKey, setSesSecretKey] = React.useState("");
   const [sesRegion, setSesRegion] = React.useState("us-east-1");
   const [sesVerifiedIdentity, setSesVerifiedIdentity] = React.useState("");
+
 
   const [configuredChannels, setConfiguredChannels] = React.useState<ConfiguredSocialChannel[]>([]);
   const [openPlatformCombobox, setOpenPlatformCombobox] = React.useState(false);
@@ -200,32 +205,13 @@ export default function SystemConfigurationPage() {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    const storedChannelsString = localStorage.getItem(LOCAL_STORAGE_CONFIGURED_CHANNELS_KEY);
     const initialChannels: ConfiguredSocialChannel[] = [
       { id: 'facebook', name: 'Facebook', icon: <FacebookIconSVG className="h-5 w-5 text-blue-600" />, status: 'Connected', accountIdentifier: 'MarketMaestro FB Page', oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='facebook')?.oauthPermissionsExample },
       { id: 'instagram', name: 'Instagram', icon: <InstagramIconSVG className="h-5 w-5 text-pink-500" />, status: 'Connected', accountIdentifier: '@MarketMaestroIG', oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='instagram')?.oauthPermissionsExample },
       { id: 'twitter', name: 'X (Twitter)', icon: <TwitterIconSVG className="h-5 w-5" />, status: 'Needs Re-auth', accountIdentifier: '@MarketMaestroX', oauthPermissionsExample: availableSocialPlatforms.find(p=>p.id==='twitter')?.oauthPermissionsExample },
     ];
-
-    if (storedChannelsString) {
-      try {
-        const storedChannels: ConfiguredSocialChannel[] = JSON.parse(storedChannelsString);
-        if (Array.isArray(storedChannels) && storedChannels.every(ch => ch.id && ch.name && ch.status !== undefined)) {
-          const hydratedChannels = storedChannels.map(sc => {
-            const platformDefinition = availableSocialPlatforms.find(ap => ap.id === sc.id);
-            return { ...sc, icon: platformDefinition ? platformDefinition.icon : <Link2IconLucide className="h-5 w-5" />, oauthPermissionsExample: platformDefinition?.oauthPermissionsExample };
-          });
-          setConfiguredChannels(hydratedChannels);
-        } else {
-           setConfiguredChannels(initialChannels);
-        }
-      } catch (e) {
-        console.error("Error parsing configured social channels from localStorage", e);
-         setConfiguredChannels(initialChannels);
-      }
-    } else {
-       setConfiguredChannels(initialChannels);
-    }
+    // In a real app, this would be fetched from a backend
+    setConfiguredChannels(initialChannels);
   }, []);
 
   const handleAddPlatformToConfiguredList = (platform: AvailableSocialPlatform) => {
@@ -233,42 +219,54 @@ export default function SystemConfigurationPage() {
       const newChannel: ConfiguredSocialChannel = { ...platform, status: 'Disconnected', accountIdentifier: undefined };
       const updatedChannels = [...configuredChannels, newChannel];
       setConfiguredChannels(updatedChannels);
-      setExpandedChannelId(platform.id); // Expand the newly added item
+      setExpandedChannelId(platform.id); 
       toast({ title: `${platform.name} added. Please connect your account below.`});
     } else {
       toast({ title: `${platform.name} is already in your list.`, variant: "default"});
     }
-    setPlatformSearchValue(""); // Clear search
-    setOpenPlatformCombobox(false); // Close combobox
+    setPlatformSearchValue(""); 
+    setOpenPlatformCombobox(false); 
   };
 
   const handleRemoveChannelFromConfiguration = (platformId: string) => {
     setConfiguredChannels(prev => prev.filter(p => p.id !== platformId));
     if (expandedChannelId === platformId) {
-      setExpandedChannelId(null); // Collapse if the removed item was expanded
+      setExpandedChannelId(null);
     }
     toast({ title: "Platform removed from list."});
   };
 
+  const performConnectionAction = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
+      let newStatus: ConfiguredSocialChannel['status'] = 'Connected';
+      let toastTitle = "";
+      let toastDescription = "";
 
-  const performConnectionAction = React.useCallback((channelId: string, actionType: 'Connect' | 'Re-authenticate') => {
-    setConfiguredChannels(prev =>
-      prev.map(channel => {
-        if (channel.id === channelId) {
-          if (actionType === 'Connect') {
-            toast({ title: `${channel.name} connected (OAuth flow simulated).`, description: "Standard permissions granted." });
-            return { ...channel, status: 'Connected', accountIdentifier: `${channel.name} User (Mock)` };
-          } else if (actionType === 'Re-authenticate') {
-            toast({ title: `${channel.name} re-authenticated (OAuth flow simulated).`, description: "Permissions refreshed." });
-            return { ...channel, status: 'Connected', accountIdentifier: channel.accountIdentifier || `${channel.name} User (Mock)` };
-          }
-        }
-        return channel;
-      })
-    );
-    setExpandedChannelId(null);
+      if (currentStatus === 'Disconnected') {
+        toastTitle = `Connecting ${configuredChannels.find(c=>c.id===channelId)?.name}... (Simulation)`;
+        toastDescription = "OAuth flow would happen here. Simulating successful connection.";
+        newStatus = 'Connected';
+      } else if (currentStatus === 'Needs Re-auth') {
+        toastTitle = `Re-authenticating ${configuredChannels.find(c=>c.id===channelId)?.name}... (Simulation)`;
+        toastDescription = "OAuth re-authentication flow would happen here. Simulating success.";
+        newStatus = 'Connected';
+      }
+      
+      // Simulate API call and then update
+      setTimeout(() => {
+        setConfiguredChannels(prev =>
+          prev.map(channel => {
+            if (channel.id === channelId) {
+                return { ...channel, status: newStatus, accountIdentifier: channel.accountIdentifier || `${channel.name} User (Mock)` };
+            }
+            return channel;
+          })
+        );
+        setExpandedChannelId(null); // Close panel after action
+        toast({ title: toastTitle.replace('...', 'Success!'), description: toastDescription.replace('...', 'successful.') });
+      }, 1000);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast]);
+  }, [toast, configuredChannels]);
 
 
   const handleDisconnectChannel = (channelId: string) => {
@@ -289,16 +287,18 @@ export default function SystemConfigurationPage() {
 
 
   const handleSaveSocialMediaConnections = () => {
-    localStorage.setItem(LOCAL_STORAGE_CONFIGURED_CHANNELS_KEY, JSON.stringify(configuredChannels));
+    // For prototype, save the currently "configured" channels to localStorage to influence dashboard
+    const channelsForDashboard = configuredChannels.filter(c => c.status === 'Connected').map(c => c.id);
+    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(channelsForDashboard));
     toast({
       title: "Social Account Preferences Saved",
-      description: "Your configured accounts and their statuses have been saved.",
+      description: "Your preferences for dashboard visibility have been saved.",
       variant: "default",
     });
   };
 
   const handleSaveAiConfiguration = async () => {
-    if (systemPassword !== "password123") { // Simple password check for prototype
+    if (systemPassword !== "password123") { 
       toast({
         title: "Authentication Failed",
         description: "Incorrect system admin password.",
@@ -315,7 +315,7 @@ export default function SystemConfigurationPage() {
     const result = await handleUpdateAiConfigurationAction(configData);
     if (result.success) {
       toast({
-        title: "AI Configuration Update (Simulated)",
+        title: "AI Configuration Update Noted",
         description: (result.message || "Settings noted.") + " Please update your .env file and restart the server manually as instructed.",
         variant: "default",
         duration: 10000,
@@ -324,7 +324,7 @@ export default function SystemConfigurationPage() {
       let errorDescription = "An unknown error occurred.";
       if (typeof result.error === 'string') {
         errorDescription = result.error;
-      } else if (result.error && 'flatten' in result.error) { // ZodError
+      } else if (result.error && 'flatten' in result.error) { 
         const flatError = (result.error as any).flatten();
         const fieldErrors = Object.entries(flatError.fieldErrors)
           .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
@@ -337,7 +337,7 @@ export default function SystemConfigurationPage() {
         variant: "destructive",
       });
     }
-    setSystemPassword(""); // Clear password
+    setSystemPassword(""); 
     setIsAiConfigModalOpen(false);
   };
 
@@ -363,18 +363,18 @@ export default function SystemConfigurationPage() {
         settingsToLog = { ...settingsToLog, apiKey: apiKey ? '********' : '', apiSecret: apiSecret ? '********' : '', sendingDomain };
         break;
     }
-    console.log("SMTP/Email Service Settings to save:", settingsToLog);
+    console.log("SMTP/Email Service Settings to save (simulation):", settingsToLog);
     toast({
       title: "Email Service Settings Saved (Simulation)",
-      description: `Configuration for ${selectedEmailService.replace(/_/g, ' ').toUpperCase()} has been noted.`,
+      description: `Configuration for ${selectedEmailService.replace(/_/g, ' ').toUpperCase()} has been noted. In a real app, this would be securely saved to a backend.`,
       variant: "default",
     });
   };
 
   const getStatusBadgeVariant = (status: ConfiguredSocialChannel['status']): "default" | "secondary" | "destructive" | "outline" => {
-    if (status === 'Connected') return 'default'; // Main theme color (blue)
-    if (status === 'Needs Re-auth') return 'destructive'; // Red
-    return 'secondary'; // Gray
+    if (status === 'Connected') return 'default'; 
+    if (status === 'Needs Re-auth') return 'destructive'; 
+    return 'secondary'; 
   };
 
 
@@ -387,11 +387,12 @@ export default function SystemConfigurationPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <Tabs defaultValue="ai-settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1 mb-6 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-7 gap-1 mb-6 h-auto">
               <TabsTrigger value="ai-settings" className="py-2 text-xs sm:text-sm"><Cpu className="mr-1 h-4 w-4 hidden sm:inline-block"/>AI Settings</TabsTrigger>
               <TabsTrigger value="smtp-settings" className="py-2 text-xs sm:text-sm"><Mailbox className="mr-1 h-4 w-4 hidden sm:inline-block"/>SMTP Settings</TabsTrigger>
-              <TabsTrigger value="email-config" className="py-2 text-xs sm:text-sm"><Mail className="mr-1 h-4 w-4 hidden sm:inline-block"/>Email Configuration</TabsTrigger>
+              <TabsTrigger value="email-config" className="py-2 text-xs sm:text-sm"><Mail className="mr-1 h-4 w-4 hidden sm:inline-block"/>Email Config</TabsTrigger>
               <TabsTrigger value="social-accounts" className="py-2 text-xs sm:text-sm"><Share2Icon className="mr-1 h-4 w-4 hidden sm:inline-block"/>Social Accounts</TabsTrigger>
+              <TabsTrigger value="storage-settings" className="py-2 text-xs sm:text-sm"><HardDrive className="mr-1 h-4 w-4 hidden sm:inline-block"/>Storage Settings</TabsTrigger>
               <TabsTrigger value="user-management" className="py-2 text-xs sm:text-sm"><UsersIconLucide className="mr-1 h-4 w-4 hidden sm:inline-block"/>User Management</TabsTrigger>
               <TabsTrigger value="notifications" className="py-2 text-xs sm:text-sm"><BellIcon className="mr-1 h-4 w-4 hidden sm:inline-block"/>Notifications</TabsTrigger>
             </TabsList>
@@ -400,7 +401,7 @@ export default function SystemConfigurationPage() {
               <div className="space-y-6 p-4 border rounded-md bg-card">
                 <h3 className="text-lg font-medium mb-2 flex items-center">
                   <Cpu className="h-5 w-5 mr-2 text-primary" />
-                  Generative AI Settings
+                  Generative AI Provider
                 </h3>
                 <div className="space-y-2">
                   <Label htmlFor="aiProvider">AI Provider</Label>
@@ -435,7 +436,7 @@ export default function SystemConfigurationPage() {
                       <Input
                         id="openRouterApiKey"
                         type="password"
-                        placeholder="Enter your OpenRouter API Key"
+                        placeholder="Enter your OpenRouter API Key (e.g., sk-or-...) "
                         value={openRouterApiKey}
                         onChange={(e) => setOpenRouterApiKey(e.target.value)}
                       />
@@ -460,7 +461,7 @@ export default function SystemConfigurationPage() {
                   <AlertTitle className="text-accent-foreground">Model Costs & Configuration</AlertTitle>
                   <AlertDescription className="text-muted-foreground">
                     Using models via OpenRouter may incur costs. Please review the pricing for your selected model on OpenRouter.
-                    Note: Genkit configuration in <code>src/ai/genkit.ts</code> has been updated to read provider and model details from the <code>.env</code> file. Please update your <code>.env</code> file and restart the server to apply changes.
+                    Note: Genkit configuration in <code>src/ai/genkit.ts</code> has been updated to read provider and model details from the <code>.env</code> file.
                   </AlertDescription>
                 </Alert>
                  <Dialog open={isAiConfigModalOpen} onOpenChange={setIsAiConfigModalOpen}>
@@ -490,7 +491,7 @@ export default function SystemConfigurationPage() {
                             <Button type="button" variant="outline">Cancel</Button>
                         </DialogClose>
                         <Button type="button" onClick={handleSaveAiConfiguration} disabled={!systemPassword.trim()}>
-                            Confirm & Apply Changes
+                            Confirm & Apply
                         </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -502,7 +503,7 @@ export default function SystemConfigurationPage() {
                <div className="space-y-6 p-4 border rounded-md bg-card">
                 <h3 className="text-lg font-medium mb-2 flex items-center">
                   <Mailbox className="mr-2 h-5 w-5 text-primary" />
-                  Email Sending Service Configuration
+                  Email Sending Service
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   Configure how the platform will send emails (e.g., campaign emails, notifications).
@@ -572,13 +573,12 @@ export default function SystemConfigurationPage() {
                   <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
                     <h4 className="font-medium">Connect via OAuth 2.0 (Recommended)</h4>
                     <p className="text-sm text-muted-foreground">
-                      For {selectedEmailService === "gmail" ? "Gmail/Google Workspace" : "Microsoft Outlook/Office 365"}, connecting via OAuth is more secure and often easier than SMTP.
+                      For {selectedEmailService === "gmail" ? "Gmail/Google Workspace" : "Microsoft Outlook/Office 365"}, connecting via OAuth is more secure.
                     </p>
                     <Button variant="outline" onClick={() => toast({ title: "OAuth Connection (Simulation)", description: `Redirecting to ${selectedEmailService === "gmail" ? "Google" : "Microsoft"} for authorization...` })}>
                       <Link2IconLucide className="mr-2 h-4 w-4"/> Connect with {selectedEmailService === "gmail" ? "Google" : "Microsoft"}
                     </Button>
                     <p className="text-sm">Status: <Badge variant="secondary">Not Connected (Simulation)</Badge></p>
-                    <p className="text-xs text-muted-foreground">You will be redirected to a secure page to authorize this application.</p>
                   </div>
                 )}
 
@@ -596,18 +596,14 @@ export default function SystemConfigurationPage() {
                     <div className="space-y-1.5">
                         <Label htmlFor="sesRegion">AWS Region</Label>
                         <Select value={sesRegion} onValueChange={setSesRegion}>
-                            <SelectTrigger id="sesRegion">
-                                <SelectValue placeholder="Select AWS Region"/>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {awsRegions.map(region => <SelectItem key={region} value={region}>{region}</SelectItem>)}
-                            </SelectContent>
+                            <SelectTrigger id="sesRegion"> <SelectValue placeholder="Select AWS Region"/> </SelectTrigger>
+                            <SelectContent> {awsRegions.map(region => <SelectItem key={region} value={region}>{region}</SelectItem>)} </SelectContent>
                         </Select>
                     </div>
                     <div className="space-y-1.5">
-                        <Label htmlFor="sesVerifiedIdentity">Verified Sending Email Address or Domain</Label>
-                        <Input id="sesVerifiedIdentity" placeholder="e.g., noreply@yourdomain.com or yourdomain.com" value={sesVerifiedIdentity} onChange={e => setSesVerifiedIdentity(e.target.value)}/>
-                         <p className="text-xs text-muted-foreground">Ensure this email/domain is verified in your AWS SES console.</p>
+                        <Label htmlFor="sesVerifiedIdentity">Verified Sending Email/Domain</Label>
+                        <Input id="sesVerifiedIdentity" placeholder="e.g., noreply@yourdomain.com" value={sesVerifiedIdentity} onChange={e => setSesVerifiedIdentity(e.target.value)}/>
+                         <p className="text-xs text-muted-foreground">Ensure this email/domain is verified in AWS SES.</p>
                     </div>
                     <Button variant="outline" onClick={() => toast({ title: "Verify SES (Simulation)", description: "Checking SES configuration..."})}>Verify & Save SES Configuration</Button>
                   </div>
@@ -618,22 +614,19 @@ export default function SystemConfigurationPage() {
                     <h4 className="font-medium">Configure with API Key: {selectedEmailService.replace(/_/g, ' ').toUpperCase()}</h4>
                      <div className="space-y-1.5">
                         <Label htmlFor="apiKey">API Key</Label>
-                        <Input id="apiKey" type="password" placeholder={`Enter your ${selectedEmailService.replace(/_/g, ' ').toUpperCase()} API Key`} value={apiKey} onChange={e => setApiKey(e.target.value)} />
+                        <Input id="apiKey" type="password" placeholder={`Enter ${selectedEmailService.replace(/_/g, ' ').toUpperCase()} API Key`} value={apiKey} onChange={e => setApiKey(e.target.value)} />
                     </div>
-                    { (selectedEmailService === "mailgun" || selectedEmailService === "sendgrid" || selectedEmailService === "brevo") &&
+                    {(selectedEmailService === "mailgun" || selectedEmailService === "sendgrid" || selectedEmailService === "brevo") &&
                         <div className="space-y-1.5">
                             <Label htmlFor="sendingDomain">Sending Domain (Recommended)</Label>
-                            <Input id="sendingDomain" placeholder="e.g., mg.yourdomain.com or yourdomain.com" value={sendingDomain} onChange={e => setSendingDomain(e.target.value)}/>
-                            <p className="text-xs text-muted-foreground">
-                                Required for some services like Mailgun, helps with deliverability.
-                            </p>
+                            <Input id="sendingDomain" placeholder="e.g., mg.yourdomain.com" value={sendingDomain} onChange={e => setSendingDomain(e.target.value)}/>
                         </div>
                     }
                      <div className="space-y-1.5">
                         <Label htmlFor="apiSecret">API Secret / Password (Optional)</Label>
-                        <Input id="apiSecret" type="password" placeholder="If your provider requires a secret/password" value={apiSecret} onChange={e => setApiSecret(e.target.value)}/>
+                        <Input id="apiSecret" type="password" placeholder="If provider requires a secret" value={apiSecret} onChange={e => setApiSecret(e.target.value)}/>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                     <p className="text-xs text-muted-foreground">
                         Refer to your <a href="#" className="underline hover:text-primary" onClick={(e) => {e.preventDefault(); toast({title:"Documentation", description:"Link to specific provider docs would go here."})}}>{selectedEmailService.replace(/_/g, ' ').toUpperCase()} documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></a> for API key details.
                     </p>
                     <Button variant="outline" onClick={() => toast({ title: `Verify ${selectedEmailService.toUpperCase()} (Simulation)`, description: "Checking API key..."})}>Verify & Save API Key</Button>
@@ -647,10 +640,10 @@ export default function SystemConfigurationPage() {
               <div className="space-y-4 p-4 border rounded-md bg-card">
                 <h3 className="text-lg font-medium mb-2 flex items-center">
                   <Mail className="mr-2 h-5 w-5 text-primary" />
-                  Email System Settings
+                  General Email Settings
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Configure general email settings, default sender information, global footers, and subscription management options. (Placeholder for future options beyond SMTP server configuration).
+                  Configure default sender information and global footers.
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="defaultFromName">Default Sender Name</Label>
@@ -662,8 +655,7 @@ export default function SystemConfigurationPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="globalEmailFooter">Global Email Footer Text/HTML (Optional)</Label>
-                  <Textarea id="globalEmailFooter" rows={3} placeholder="e.g., © 2024 Your Company. All rights reserved. 123 Main St, Anytown, USA" />
-                  <p className="text-xs text-muted-foreground">This will be appended to all marketing emails if not overridden by campaign-specific footers. Unsubscribe links are usually added automatically.</p>
+                  <Textarea id="globalEmailFooter" rows={3} placeholder="e.g., © 2024 Your Company. All rights reserved. ..." />
                 </div>
                  <Button onClick={() => toast({title: "Email Settings Saved", description:"General email settings saved (simulation)."})} className="mt-4">Save Email Settings</Button>
               </div>
@@ -676,7 +668,7 @@ export default function SystemConfigurationPage() {
                   Social Media Account Connections
                 </h3>
                 <p className="text-sm text-muted-foreground mb-1">
-                  Add, connect, and manage social media accounts that MarketMaestro will use for posting, analytics, and dashboard visibility. Actual account connection (OAuth, etc.) is simulated for this prototype.
+                  Manage which social media accounts are connected and their settings. Changes saved here can influence dashboard visibility.
                 </p>
                 <div className="space-y-2">
                     <Label htmlFor="platformCombobox">Add Platform to Manage</Label>
@@ -690,7 +682,7 @@ export default function SystemConfigurationPage() {
                           className="w-full md:w-[300px] justify-between"
                         >
                           {platformSearchValue && availableSocialPlatforms.find(p => p.name.toLowerCase() === platformSearchValue.toLowerCase())?.name
-                            || "Select platform to add..."}
+                            || "Select platform..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -765,7 +757,7 @@ export default function SystemConfigurationPage() {
                                         Re-authenticate
                                     </Button>
                                     )}
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name} from list`}>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name}`}>
                                     <Trash2 className="h-4 w-4"/>
                                     <span className="sr-only">Remove {channel.name}</span>
                                     </Button>
@@ -799,7 +791,7 @@ export default function SystemConfigurationPage() {
                                     <Button
                                       variant="default"
                                       className="w-full"
-                                      onClick={() => performConnectionAction(channel.id, channel.status === 'Disconnected' ? 'Connect' : 'Re-authenticate')}
+                                      onClick={() => performConnectionAction(channel.id, channel.status)}
                                     >
                                       {channel.status === 'Disconnected' ? <Link2IconLucide className="mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                                        Proceed to {channel.status === 'Disconnected' ? `Connect with ${channel.name}` : `Re-authenticate ${channel.name}`}
@@ -860,8 +852,35 @@ export default function SystemConfigurationPage() {
                   </p>
                 )}
 
-                 <Button onClick={handleSaveSocialMediaConnections} className="mt-6">Save Social Account Preferences</Button>
-                 <p className="text-xs text-muted-foreground mt-2">This saves which channels are managed by the system and their connection status (locally for this prototype). Only 'Connected' channels will be available for posting and analytics.</p>
+                 <Button onClick={handleSaveSocialMediaConnections} className="mt-6">Save Dashboard Preferences</Button>
+                 <p className="text-xs text-muted-foreground mt-2">This saves which channels (and their connection status) are considered for dashboard visibility and posting. Only 'Connected' channels will be fully active.</p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="storage-settings">
+              <div className="space-y-4 p-4 border rounded-md bg-card">
+                <h3 className="text-lg font-medium mb-2 flex items-center">
+                  <HardDrive className="mr-2 h-5 w-5 text-primary" />
+                  Storage Settings
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Configure where your media assets and other large files will be stored. (Placeholder)
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="storageProvider">Storage Provider</Label>
+                  <Select disabled>
+                    <SelectTrigger className="w-full md:w-[300px]">
+                      <SelectValue placeholder="Select storage provider (e.g., Firebase Storage, AWS S3)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="firebase_storage">Firebase Cloud Storage</SelectItem>
+                      <SelectItem value="aws_s3">Amazon S3</SelectItem>
+                      <SelectItem value="local">Local Server Storage (Not recommended for production)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-muted-foreground">Configuration options for the selected provider would appear here.</p>
+                <Button variant="outline" disabled>Configure Storage</Button>
               </div>
             </TabsContent>
 
@@ -874,6 +893,7 @@ export default function SystemConfigurationPage() {
                 <Button variant="outline" onClick={() => window.location.href='/admin/team-management'}>
                   Go to Team Management Page
                 </Button>
+                 <p className="text-xs text-muted-foreground mt-1">Invite, remove, and manage roles for team members who can access this MarketMaestro instance.</p>
               </div>
             </TabsContent>
 
@@ -884,7 +904,7 @@ export default function SystemConfigurationPage() {
                   Notification Settings
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Configure system-wide notification preferences. (Placeholder)
+                  Configure system-wide notification preferences for events like post failures, approvals, or significant engagement spikes. (Placeholder)
                 </p>
                 <Button variant="outline" onClick={() => toast({title: "Configure Notifications", description:"This feature is not implemented yet."})}>Configure Notifications</Button>
               </div>
