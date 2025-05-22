@@ -1,11 +1,18 @@
 
 "use client";
 
-import React, { useState } from 'react'; // Added useState
+import React, { useState } from 'react'; 
 import { MainLayout } from '@/components/layout/main-layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, ListFilter, Search, Spline as SplineIcon, Sparkles, Lightbulb } from 'lucide-react'; // Added Sparkles, Lightbulb
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle, 
+  CardFooter // Ensure CardFooter is imported
+} from '@/components/ui/card';
+import { PlusCircle, ListFilter, Search, Spline as SplineIcon, Sparkles, Lightbulb } from 'lucide-react'; 
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import {
@@ -152,7 +159,7 @@ export default function SegmentsPage() {
                           <Button variant="link" size="sm" className="p-0 h-auto" asChild>
                             <Link href={`/email-marketing/segments/${segment.id}`}>Edit/View</Link>
                           </Button>
-                           <Button variant="link" size="sm" className="p-0 h-auto ml-2 text-destructive hover:text-destructive/80" onClick={() => alert('Delete action is not implemented in this prototype.')}>
+                           <Button variant="link" size="sm" className="p-0 h-auto ml-2 text-destructive hover:text-destructive/80" onClick={() => toast({title: 'Delete Action (Simulation)', description: `Simulating delete for segment: ${segment.name}`})}>
                             Delete
                           </Button>
                         </td>
