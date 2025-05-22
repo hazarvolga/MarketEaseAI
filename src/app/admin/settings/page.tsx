@@ -10,55 +10,24 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
-  Cog,
   Cpu,
   Link2 as Link2IconLucide,
   UserPlus,
   Mailbox,
-  SlidersHorizontal,
   PlusCircle as PlusCircleIcon,
   Check,
   ChevronsUpDown,
   ListChecks,
-  FileText as FileTextIcon,
   ExternalLink,
   Search,
   Trash2,
-  Users as UsersIconLucide,
   Bell as BellIcon,
-  Briefcase,
   AlertCircle as AlertCircleIcon,
   RefreshCw,
   Share2 as Share2Icon,
   Building,
   ImageIcon as ImageIconLucide,
   Youtube,
-  ShieldCheck,
-  Paperclip,
-  Settings2,
-  BarChart3,
-  ListChecks as ListChecksIcon,
-  Spline as SplineIcon,
-  Send as SendIcon,
-  LayoutTemplate as TemplateIcon,
-  Home,
-  Lightbulb,
-  PanelLeft,
-  UserCircle,
-  Mail,
-  MailPlus,
-  Edit3,
-  CalendarDays,
-  MessageSquare,
-  Clock,
-  Tag,
-  ThumbsUp,
-  FileWarning,
-  ImagePlus,
-  Video,
-  FileText,
-  Filter,
-  UploadCloud,
   HardDrive,
   Database, 
   Cloud,    
@@ -67,14 +36,15 @@ import {
   KeyRound,
   FileCog,
   UsersRound,
-  Palette,
-  Languages,
-  MonitorPlay,
-  FileQuestion,
-  HelpingHand,
-  Landmark,
-  GanttChartSquare,
+  Mail,
+  Settings,
+  Send as SendIcon,
   ServerCog,
+  PanelLeft,
+  Eye,
+  SlidersHorizontal,
+  Users as UsersIconLucide,
+  Briefcase,
   Smartphone,
 } from 'lucide-react';
 import {
@@ -140,7 +110,7 @@ const PinterestIconSVG = (props: CustomIconProps) => (
 );
 
 
-type AiProvider = "gemini" | "openrouter";
+type AiProvider = "gemini" | "openrouter" | "openai" | "anthropic";
 
 interface EmailServiceProvider {
   id: string;
@@ -243,7 +213,7 @@ const availableStorageProviders: StorageProviderOption[] = [
   {
     id: "google_drive",
     name: "Google Drive",
-    icon: <Smartphone className="h-4 w-4 text-green-500" />, 
+    icon: <Cloud className="h-4 w-4 text-green-500" />, 
     configFields: [
       { id: "clientId", label: "Google Client ID", type: "text", placeholder: "Your Google Client ID" },
       { id: "clientSecret", label: "Google Client Secret", type: "password", placeholder: "Your Google Client Secret" },
@@ -306,6 +276,11 @@ export default function SystemConfigurationPage() {
   const [geminiApiKey, setGeminiApiKey] = React.useState("");
   const [openRouterApiKey, setOpenRouterApiKey] = React.useState("");
   const [openRouterModelName, setOpenRouterModelName] = React.useState("");
+  const [openAiApiKey, setOpenAiApiKey] = React.useState("");
+  const [openAiModelName, setOpenAiModelName] = React.useState("gpt-4o"); // Default OpenAI model
+  const [anthropicApiKey, setAnthropicApiKey] = React.useState("");
+  const [anthropicModelName, setAnthropicModelName] = React.useState("claude-3-opus-20240229"); // Default Anthropic model
+  
   const [systemPassword, setSystemPassword] = React.useState("");
   const [isAiConfigModalOpen, setIsAiConfigModalOpen] = React.useState(false);
 
@@ -315,15 +290,15 @@ export default function SystemConfigurationPage() {
   const [smtpUser, setSmtpUser] = React.useState("");
   const [smtpPassword, setSmtpPassword] = React.useState("");
   const [smtpEncryption, setSmtpEncryption] = React.useState("tls");
-  const [apiKey, setApiKey] = React.useState("");
-  const [apiSecret, setApiSecret] = React.useState(""); // For API-based email services
+  const [apiKey, setApiKey] = React.useState(""); // For API-key based email services
+  const [apiSecret, setApiSecret] = React.useState(""); 
   const [sesAccessKey, setSesAccessKey] = React.useState("");
   const [sesSecretKey, setSesSecretKey] = React.useState("");
   const [sesRegion, setSesRegion] = React.useState("us-east-1");
   const [sesVerifiedIdentity, setSesVerifiedIdentity] = React.useState("");
-  const [sendingDomain, setSendingDomain] = React.useState(""); // For some API-based services
+  const [sendingDomain, setSendingDomain] = React.useState(""); 
 
-  const [configuredChannels, setConfiguredChannels] = React.useState<ConfiguredSocialChannel[]>([]);
+  const [configuredDashboardChannels, setConfiguredDashboardChannels] = React.useState<ConfiguredSocialChannel[]>([]);
   const [openPlatformCombobox, setOpenPlatformCombobox] = React.useState(false);
   const [platformSearchValue, setPlatformSearchValue] = React.useState("");
   const [expandedChannelId, setExpandedChannelId] = React.useState<string | null>(null);
@@ -341,37 +316,40 @@ export default function SystemConfigurationPage() {
       const stored = localStorage.getItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY);
       if (stored) {
         try {
-          const parsed = JSON.parse(stored) as ConfiguredSocialChannel[]; // Assuming full object is stored
-          // Hydrate icons and permissions which are not stored in localStorage
-          const hydratedChannels = parsed.map(storedChannel => {
+          const parsed = JSON.parse(stored) as ConfiguredSocialChannel[];
+           const hydratedChannels = parsed.map(storedChannel => {
             const basePlatform = availableSocialPlatforms.find(p => p.id === storedChannel.id);
             return {
               ...storedChannel,
               icon: basePlatform?.icon || <Share2Icon className="h-5 w-5 text-muted-foreground" />,
+              name: basePlatform?.name || storedChannel.name, // Ensure name is present
               oauthPermissionsExample: basePlatform?.oauthPermissionsExample,
             };
-          });
-          setConfiguredChannels(hydratedChannels);
+          }).filter(ch => ch.name); // Filter out any that might not have a name after hydration
+          setConfiguredDashboardChannels(hydratedChannels);
         } catch (e) {
-          console.error("Failed to parse configured channels from localStorage", e);
-          setConfiguredChannels([]); 
+          console.error("Failed to parse configured dashboard channels from localStorage", e);
+           setConfiguredDashboardChannels([
+            { ...availableSocialPlatforms.find(p=>p.id==='facebook')!, status: 'Connected', accountIdentifier: 'MarketMaestro Page (Mock)' },
+            { ...availableSocialPlatforms.find(p=>p.id==='instagram')!, status: 'Disconnected', accountIdentifier: undefined },
+          ]);
         }
       } else {
-         // Initialize with a few defaults if localStorage is empty
-        setConfiguredChannels([
-            { ...availableSocialPlatforms[0], status: 'Connected', accountIdentifier: 'MarketMaestro Page (Mock)' }, // Facebook
-            { ...availableSocialPlatforms[1], status: 'Connected', accountIdentifier: '@MarketMaestroIG (Mock)' }, // Instagram
+         setConfiguredDashboardChannels([
+            { ...availableSocialPlatforms.find(p=>p.id==='facebook')!, status: 'Connected', accountIdentifier: 'MarketMaestro Page (Mock)' },
+            { ...availableSocialPlatforms.find(p=>p.id==='instagram')!, status: 'Disconnected', accountIdentifier: undefined },
+            { ...availableSocialPlatforms.find(p=>p.id==='twitter')!, status: 'Needs Re-auth', accountIdentifier: '@MarketMaestroX (Mock)' },
         ]);
       }
     }
   }, []);
   
   const handleAddPlatformToConfiguredList = (platform: AvailableSocialPlatform) => {
-    if (!configuredChannels.find(p => p.id === platform.id)) {
+    if (!configuredDashboardChannels.find(p => p.id === platform.id)) {
       const newChannel: ConfiguredSocialChannel = { ...platform, status: 'Disconnected', accountIdentifier: undefined };
-      setConfiguredChannels(prev => [...prev, newChannel]);
-      setExpandedChannelId(platform.id); 
-      toast({ title: `${platform.name} added to configuration. Click 'Connect' or 'Save Preferences'.`});
+      setConfiguredDashboardChannels(prev => [...prev, newChannel]);
+      setExpandedChannelId(platform.id); // Open the new channel's connection panel
+      toast({ title: `${platform.name} added to configuration list. Please connect it.`});
     } else {
       toast({ title: `${platform.name} is already in your configuration list.`, variant: "default"});
     }
@@ -380,70 +358,70 @@ export default function SystemConfigurationPage() {
   };
   
   const handleRemoveChannelFromConfiguration = (platformId: string) => {
-    setConfiguredChannels(prev => prev.filter(p => p.id !== platformId));
+    setConfiguredDashboardChannels(prev => prev.filter(p => p.id !== platformId));
     if (expandedChannelId === platformId) {
       setExpandedChannelId(null);
     }
     toast({ title: "Platform removed from configuration."});
   };
 
-  const handleToggleChannelStatus = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
+ const performConnectionAction = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
     let toastTitle = "";
     let newStatus: ConfiguredSocialChannel['status'] = 'Disconnected';
     let newAccountIdentifier: string | undefined = undefined;
-    const channel = configuredChannels.find(c => c.id === channelId);
+    const channel = configuredDashboardChannels.find(c => c.id === channelId);
     if (!channel) return;
 
-    switch (currentStatus) {
-      case 'Disconnected':
+    const actionType = currentStatus === 'Disconnected' ? 'Connect' : 
+                       currentStatus === 'Needs Re-auth' ? 'Re-authenticate' : 
+                       'Disconnect'; // Default for Connected
+
+    switch (actionType) {
+      case 'Connect':
         toastTitle = `Connecting ${channel.name}...`;
         newStatus = 'Connected';
         newAccountIdentifier = `${channel.name} User (Mock)`;
         break;
-      case 'Connected': // This case is for the "Disconnect" button
+      case 'Disconnect': // This case will be triggered if the currentStatus is 'Connected'
         toastTitle = `Disconnecting ${channel.name}...`;
         newStatus = 'Disconnected';
         newAccountIdentifier = undefined;
         break;
-      case 'Needs Re-auth':
+      case 'Re-authenticate':
         toastTitle = `Re-authenticating ${channel.name}...`;
         newStatus = 'Connected';
-        // Keep existing identifier or set a new mock one if it was cleared
         newAccountIdentifier = channel.accountIdentifier || `${channel.name} User (Mock)`; 
         break;
     }
     
+    // Simulate API call
     setTimeout(() => {
-      setConfiguredChannels(prevChannels =>
+      setConfiguredDashboardChannels(prevChannels =>
         prevChannels.map(ch =>
           ch.id === channelId ? { ...ch, status: newStatus, accountIdentifier: newAccountIdentifier } : ch
         )
       );
-      if (currentStatus === 'Disconnected' || currentStatus === 'Needs Re-auth') {
-        setExpandedChannelId(null); // Close inline panel after successful connect/re-auth
+      if (actionType !== 'Disconnect') { // Don't close if we just disconnected from manage view
+           setExpandedChannelId(null); 
       }
-      // Show success toast after state update seems more reliable
-      setTimeout(() => {
+      setTimeout(() => { // Ensure state update has propagated before toasting
          toast({ title: `${toastTitle.replace('...','')} (Simulation Successful)` });
       }, 0);
     }, 500);
-  }, [configuredChannels, toast]);
+  }, [configuredDashboardChannels, toast]);
 
 
   const handleToggleManageSection = (channelId: string) => {
     setExpandedChannelId(prevId => (prevId === channelId ? null : channelId));
   };
 
-  const handleSaveDashboardPreferences = () => {
-    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(
-      // Only save IDs of connected channels if that's the intent, 
-      // or save all configured channels with their statuses if settings page should reflect that.
-      // For now, let's save the full configuredChannels state to allow persistence of "Disconnected" etc.
-      configuredChannels.map(({icon, oauthPermissionsExample, ...rest}) => rest) // Strip non-serializable parts
-    ));
+  const handleSaveSocialMediaConnections = () => {
+    // Filter out icon and oauthPermissionsExample before saving
+    const channelsToSave = configuredDashboardChannels.map(({ icon, oauthPermissionsExample, ...rest }) => rest);
+    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(channelsToSave));
     toast({
-      title: "Dashboard & Connection Preferences Saved",
-      description: "Your social media connection statuses and configuration have been saved locally.",
+      title: "Social Media Dashboard Preferences Saved",
+      description: "Your social media selections for the dashboard overview have been saved locally.",
       variant: "default",
     });
   };
@@ -453,12 +431,17 @@ export default function SystemConfigurationPage() {
       toast({ title: "Authentication Failed", description: "Incorrect system admin password.", variant: "destructive" });
       return;
     }
-    const configData: AiConfigurationInput = {
-      provider: selectedProvider,
+
+    const configData : AiConfigurationInput = {
+      provider: selectedProvider as "gemini" | "openrouter", // Ensure type safety
       geminiApiKey: selectedProvider === 'gemini' ? geminiApiKey : undefined,
       openRouterApiKey: selectedProvider === 'openrouter' ? openRouterApiKey : undefined,
       openRouterModel: selectedProvider === 'openrouter' ? openRouterModelName : undefined,
+      // Include OpenAI and Anthropic fields conditionally if they are part of AiConfigurationInput
+      ...(selectedProvider === 'openai' && { openAiApiKey, openAiModelName }),
+      ...(selectedProvider === 'anthropic' && { anthropicApiKey, anthropicModelName }),
     };
+    
     const result = await handleUpdateAiConfigurationAction(configData);
     if (result.success) {
       toast({ title: "AI Configuration Update Noted", description: (result.message || "Settings noted.") + " Please update your .env file and restart the server manually as instructed.", variant: "default", duration: 10000 });
@@ -481,7 +464,7 @@ export default function SystemConfigurationPage() {
     const currentService = emailServiceProviders.find(p=>p.id === selectedEmailService);
     switch (selectedEmailService) {
       case "generic_smtp": settingsToLog = { ...settingsToLog, smtpHost, smtpPort, smtpUser, smtpEncryption, smtpPassword: smtpPassword ? '********' : '' }; break;
-      case "gmail": case "outlook": settingsToLog = { ...settingsToLog, connectionMethod: "OAuth 2.0 (Simulated)" }; break; // Add specific fields if needed
+      case "gmail": case "outlook": settingsToLog = { ...settingsToLog, connectionMethod: "OAuth 2.0 (Simulated)" }; break; 
       case "ses": settingsToLog = { ...settingsToLog, sesAccessKey, sesSecretKey: sesSecretKey ? '********' : '', sesRegion, sesVerifiedIdentity }; break;
       case "mailgun": case "sendgrid": case "postmark": case "brevo": case "mailjet": case "zoho_mail":
         settingsToLog = { ...settingsToLog, apiKey: apiKey ? '********' : '', apiSecret: apiSecret ? '********' : '', sendingDomain };
@@ -514,24 +497,31 @@ export default function SystemConfigurationPage() {
   const activeServiceIcons = React.useMemo(() => {
     const icons: React.ReactNode[] = [];
     // AI
-    if (selectedProvider && (geminiApiKey || (openRouterApiKey && openRouterModelName))) {
-      icons.push(<Tooltip key="ai-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: {selectedProvider}</p></TooltipContent></Tooltip>);
+    if (selectedProvider === 'gemini' && geminiApiKey) {
+      icons.push(<Tooltip key="ai-gemini-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: Google Gemini</p></TooltipContent></Tooltip>);
+    } else if (selectedProvider === 'openrouter' && openRouterApiKey && openRouterModelName) {
+      icons.push(<Tooltip key="ai-openrouter-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: OpenRouter ({openRouterModelName})</p></TooltipContent></Tooltip>);
+    } else if (selectedProvider === 'openai' && openAiApiKey && openAiModelName) {
+      icons.push(<Tooltip key="ai-openai-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: OpenAI ({openAiModelName})</p></TooltipContent></Tooltip>);
+    } else if (selectedProvider === 'anthropic' && anthropicApiKey && anthropicModelName) {
+      icons.push(<Tooltip key="ai-anthropic-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: Anthropic ({anthropicModelName})</p></TooltipContent></Tooltip>);
     }
+    
     // SMTP
     const smtpService = emailServiceProviders.find(p => p.id === selectedEmailService);
     if (smtpService && (
         (selectedEmailService === "generic_smtp" && smtpHost && smtpPort && smtpUser) ||
         (selectedEmailService === "ses" && sesAccessKey && sesSecretKey && sesRegion && sesVerifiedIdentity) ||
-        (["gmail", "outlook"].includes(selectedEmailService) /* Assuming OAuth is "configured" if selected for UI purposes */) ||
+        (["gmail", "outlook"].includes(selectedEmailService) /* Assuming OAuth is "configured" if selected */) ||
         (!["generic_smtp", "gmail", "outlook", "ses"].includes(selectedEmailService) && apiKey)
     )) {
          icons.push(<Tooltip key={`smtp-${smtpService.id}-active`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7">{React.cloneElement(smtpService.icon as React.ReactElement, { className: "h-5 w-5" })}</Button></TooltipTrigger><TooltipContent><p>SMTP: {smtpService.name}</p></TooltipContent></Tooltip>);
     }
     // Social Media
-    configuredChannels.filter(c => c.status === 'Connected').slice(0, 3).forEach(channel => {
+    configuredDashboardChannels.filter(c => c.status === 'Connected').slice(0, 3).forEach(channel => {
       icons.push(<Tooltip key={`social-${channel.id}-active`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7">{React.cloneElement(channel.icon as React.ReactElement, { className: "h-5 w-5" })}</Button></TooltipTrigger><TooltipContent><p>Social: {channel.name}</p></TooltipContent></Tooltip>);
     });
-    if (configuredChannels.filter(c => c.status === 'Connected').length > 3) {
+    if (configuredDashboardChannels.filter(c => c.status === 'Connected').length > 3) {
         icons.push(<Tooltip key="social-more-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><PlusCircleIcon className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>+ More Social</p></TooltipContent></Tooltip>);
     }
     // Storage
@@ -544,7 +534,12 @@ export default function SystemConfigurationPage() {
     }
 
     return icons;
-  }, [selectedProvider, geminiApiKey, openRouterApiKey, openRouterModelName, selectedEmailService, smtpHost, smtpPort, smtpUser, sesAccessKey, sesSecretKey, sesRegion, sesVerifiedIdentity, apiKey, configuredChannels, selectedStorageProviderId, storageConfigInputs]);
+  }, [
+    selectedProvider, geminiApiKey, openRouterApiKey, openRouterModelName, openAiApiKey, openAiModelName, anthropicApiKey, anthropicModelName,
+    selectedEmailService, smtpHost, smtpPort, smtpUser, sesAccessKey, sesSecretKey, sesRegion, sesVerifiedIdentity, apiKey,
+    configuredDashboardChannels, 
+    selectedStorageProviderId, storageConfigInputs
+  ]);
 
 
   return (
@@ -600,6 +595,8 @@ export default function SystemConfigurationPage() {
                     <SelectContent>
                       <SelectItem value="gemini">Google Gemini (Default)</SelectItem>
                       <SelectItem value="openrouter">OpenRouter</SelectItem>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="anthropic">Anthropic</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -644,12 +641,67 @@ export default function SystemConfigurationPage() {
                     </div>
                   </div>
                 )}
+
+                {selectedProvider === 'openai' && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div className="space-y-2">
+                      <Label htmlFor="openAiApiKey">OpenAI API Key</Label>
+                      <Input
+                        id="openAiApiKey"
+                        type="password"
+                        placeholder="Enter your OpenAI API Key (e.g., sk-...)"
+                        value={openAiApiKey}
+                        onChange={(e) => setOpenAiApiKey(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="openAiModelName">OpenAI Model Name (Optional)</Label>
+                      <Input
+                        id="openAiModelName"
+                        placeholder="e.g., gpt-4o, gpt-3.5-turbo (defaults if empty)"
+                        value={openAiModelName}
+                        onChange={(e) => setOpenAiModelName(e.target.value)}
+                      />
+                       <p className="text-xs text-muted-foreground">
+                        Specify the model identifier. Refer to <Link href="https://platform.openai.com/docs/models" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">OpenAI documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link>.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedProvider === 'anthropic' && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div className="space-y-2">
+                      <Label htmlFor="anthropicApiKey">Anthropic API Key</Label>
+                      <Input
+                        id="anthropicApiKey"
+                        type="password"
+                        placeholder="Enter your Anthropic API Key (e.g., sk-ant-...)"
+                        value={anthropicApiKey}
+                        onChange={(e) => setAnthropicApiKey(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="anthropicModelName">Anthropic Model Name (Optional)</Label>
+                      <Input
+                        id="anthropicModelName"
+                        placeholder="e.g., claude-3-opus-20240229 (defaults if empty)"
+                        value={anthropicModelName}
+                        onChange={(e) => setAnthropicModelName(e.target.value)}
+                      />
+                       <p className="text-xs text-muted-foreground">
+                        Specify the model identifier. Refer to <Link href="https://docs.anthropic.com/claude/models-overview" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Anthropic documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link>.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                  <Alert variant="default" className="bg-background/70">
                   <AlertCircleIcon className="h-4 w-4" />
                   <AlertTitle>Model Costs & Configuration</AlertTitle>
                   <AlertDescription className="text-muted-foreground">
-                    Using models via OpenRouter may incur costs. Please review the pricing for your selected model on OpenRouter.
-                    Note: Genkit configuration in <code>src/ai/genkit.ts</code> has been updated to read provider and model details from the <code>.env</code> file.
+                    Using models via OpenRouter, OpenAI, or Anthropic may incur costs. Please review pricing on their respective platforms.
+                    Genkit configuration in <code>src/ai/genkit.ts</code> reads provider and model details from the <code>.env</code> file. This UI helps you prepare the values for your <code>.env</code>.
                   </AlertDescription>
                 </Alert>
                  <Dialog open={isAiConfigModalOpen} onOpenChange={setIsAiConfigModalOpen}>
@@ -660,18 +712,18 @@ export default function SystemConfigurationPage() {
                         <DialogHeader>
                         <DialogTitle>Confirm AI Configuration Update</DialogTitle>
                         <DialogDescription>
-                            Please enter the system admin password to apply these changes.
+                            Please enter the system admin password (mock: password123).
                             You will be prompted with instructions to update your <code>.env</code> file, and the server will need to be restarted manually after that.
                         </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-3">
-                            <Label htmlFor="systemPassword">System Admin Password (mock: password123)</Label>
+                            <Label htmlFor="systemPassword">System Admin Password</Label>
                             <Input
                                 id="systemPassword"
                                 type="password"
                                 value={systemPassword}
                                 onChange={(e) => setSystemPassword(e.target.value)}
-                                placeholder="Enter admin password"
+                                placeholder="Enter admin password (mock: password123)"
                             />
                         </div>
                         <DialogFooter className="sm:justify-between">
@@ -679,7 +731,7 @@ export default function SystemConfigurationPage() {
                             <Button type="button" variant="outline">Cancel</Button>
                         </DialogClose>
                         <Button type="button" onClick={handleSaveAiConfiguration} disabled={!systemPassword.trim()}>
-                            Confirm & Apply
+                            Confirm & Get .env Instructions
                         </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -694,7 +746,7 @@ export default function SystemConfigurationPage() {
                   Email Sending Service
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Configure how the platform will send emails (e.g., campaign emails, notifications).
+                  Configure how the platform will send emails.
                 </p>
 
                 <div className="space-y-2">
@@ -798,7 +850,7 @@ export default function SystemConfigurationPage() {
                           <CommandList>
                             <CommandEmpty>No platform found.</CommandEmpty>
                             <CommandGroup>
-                              {availableSocialPlatforms.filter(p => !configuredChannels.find(cp => cp.id === p.id) && p.name.toLowerCase().includes(platformSearchValue.toLowerCase()))
+                              {availableSocialPlatforms.filter(p => !configuredDashboardChannels.find(cp => cp.id === p.id) && p.name.toLowerCase().includes(platformSearchValue.toLowerCase()))
                                 .map((platform) => (
                                 <CommandItem key={platform.id} value={platform.name} onSelect={() => handleAddPlatformToConfiguredList(platform)} className="flex items-center gap-2 cursor-pointer">
                                   {platform.icon} {platform.name}
@@ -811,11 +863,11 @@ export default function SystemConfigurationPage() {
                     </Popover>
                   </div>
 
-                {configuredChannels.length > 0 ? (
+                {configuredDashboardChannels.length > 0 ? (
                   <ScrollArea className="h-auto max-h-[60vh] mt-4 border rounded-md">
                     <div className="p-3 space-y-3">
                       <h4 className="font-medium text-sm text-muted-foreground">Configured Channels:</h4>
-                      {configuredChannels.map((channel) => (
+                      {configuredDashboardChannels.map((channel) => (
                         <div key={channel.id} className="flex flex-col p-3 border rounded-md hover:bg-muted/50 gap-2">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
                                 <div className="flex items-center gap-2 flex-grow">
@@ -833,12 +885,12 @@ export default function SystemConfigurationPage() {
                                     )}
                                     {channel.status === 'Connected' && (<> 
                                         <Button variant="ghost" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Manage</Button> 
-                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => handleToggleChannelStatus(channel.id, 'Connected')}>Disconnect</Button> 
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => performConnectionAction(channel.id, 'Connected')}>Disconnect</Button> 
                                     </>)}
                                     {channel.status === 'Needs Re-auth' && (
                                         <Button variant="default" size="sm" onClick={() => handleToggleManageSection(channel.id)} className="bg-muted hover:bg-card border border-accent text-primary-foreground">Re-authenticate</Button> 
                                     )}
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name} from configuration`}> <Trash2 className="h-4 w-4"/> <span className="sr-only">Remove {channel.name}</span> </Button>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name} from configuration list`}> <Trash2 className="h-4 w-4"/> <span className="sr-only">Remove {channel.name}</span> </Button>
                                 </div>
                             </div>
 
@@ -854,7 +906,7 @@ export default function SystemConfigurationPage() {
                                       <div> <Label htmlFor={`appId-${channel.id}`} className="text-xs">App ID / Client ID (if applicable)</Label> <Input id={`appId-${channel.id}`} placeholder="Enter App ID (optional)" className="h-8 text-xs mt-0.5"/> </div>
                                       <p className="text-xs text-muted-foreground">Note: Most connections are via OAuth. Enter details above only if specifically required by the platform's alternative connection method.</p>
                                     </div>
-                                    <Button variant="default" className="w-full" onClick={() => handleToggleChannelStatus(channel.id, 'Disconnected')}> <Link2IconLucide className="mr-2 h-4 w-4" /> Proceed to Connect with {channel.name} </Button>
+                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Disconnected')}> <Link2IconLucide className="mr-2 h-4 w-4" /> Proceed to Connect with {channel.name} </Button>
                                   </>
                                 )}
                                  { (channel.status === 'Needs Re-auth') && (
@@ -865,7 +917,7 @@ export default function SystemConfigurationPage() {
                                     <div className="space-y-3 my-3">
                                       <div> <Label htmlFor={`reauth-apiKey-${channel.id}`} className="text-xs">API Key (if applicable)</Label> <Input id={`reauth-apiKey-${channel.id}`} placeholder="Confirm API Key (optional)" className="h-8 text-xs mt-0.5"/> </div>
                                     </div>
-                                    <Button variant="default" className="w-full" onClick={() => handleToggleChannelStatus(channel.id, 'Needs Re-auth')}> <RefreshCw className="mr-2 h-4 w-4" /> Proceed to Re-authenticate {channel.name} </Button>
+                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Needs Re-auth')}> <RefreshCw className="mr-2 h-4 w-4" /> Proceed to Re-authenticate {channel.name} </Button>
                                   </>
                                 )}
                                 {channel.status === 'Connected' && (
@@ -877,7 +929,7 @@ export default function SystemConfigurationPage() {
                                         <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Connected Since</Label> <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words"> January 1, 2024 (Mock) </p> </div>
                                         <div className="space-y-1"> <Label htmlFor={`customApiEndpoint-${channel.id}`} className="text-xs text-muted-foreground">Custom API Endpoint (Optional)</Label> <Input id={`customApiEndpoint-${channel.id}`} placeholder="e.g., https://graph.facebook.com/v18.0" className="text-xs h-8" disabled/> <p className="text-xs text-muted-foreground">For advanced users with specific API needs (not functional).</p> </div>
                                         <div className="flex justify-end gap-2 pt-2">
-                                            <Button type="button" variant="outline" size="sm" onClick={() => { setConfiguredChannels(prev => prev.map(c => c.id === channel.id ? {...c, status: 'Needs Re-auth'} : c)); setExpandedChannelId(null); setTimeout(() => setExpandedChannelId(channel.id), 50); setTimeout(() => toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`}), 100); }}> <RefreshCw className="mr-2 h-4 w-4"/> Refresh </Button>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => { setConfiguredDashboardChannels(prev => prev.map(c => c.id === channel.id ? {...c, status: 'Needs Re-auth'} : c)); setExpandedChannelId(null); setTimeout(() => setExpandedChannelId(channel.id), 50); setTimeout(() => toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`}), 100); }}> <RefreshCw className="mr-2 h-4 w-4"/> Refresh </Button>
                                             <Button type="button" variant="outline" size="sm" onClick={() => toast({ title: "View Platform Settings (Simulated)", description: `Opening ${channel.name} settings (not implemented).`})}> <ExternalLink className="mr-2 h-4 w-4"/> View on {channel.name} </Button>
                                         </div>
                                     </div>
@@ -894,7 +946,7 @@ export default function SystemConfigurationPage() {
                     No platforms configured yet. Add platforms using the selector above.
                   </p>
                 )}
-                 <Button onClick={handleSaveDashboardPreferences} className="mt-6">Save Dashboard Preferences</Button>
+                 <Button onClick={handleSaveSocialMediaConnections} className="mt-6">Save Dashboard Preferences</Button>
                  <p className="text-xs text-muted-foreground mt-2">This saves which of your configured channels appear on the main Dashboard Overview (only 'Connected' ones will be shown).</p>
               </div>
             </TabsContent>
@@ -957,3 +1009,5 @@ export default function SystemConfigurationPage() {
     </MainLayout>
   );
 }
+
+    
