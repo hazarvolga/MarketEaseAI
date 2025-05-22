@@ -22,25 +22,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-
-interface Segment {
-  id: string;
-  name: string;
-  criteria: string;
-  contactsCount: number;
-  creationDate: string;
-}
-
-const initialSegmentsMock: Segment[] = [
-  { id: '1', name: 'Active Users (Last 30 Days)', criteria: 'Last login < 30 days AGO AND open rate > 10%', contactsCount: 450, creationDate: '2023-08-01' },
-  { id: '2', name: 'Construction Industry Newsletter', criteria: 'Industry = Construction AND List = Newsletter Subscribers', contactsCount: 320, creationDate: '2023-07-15' },
-  { id: '3', name: 'Low Engagement Subscribers', criteria: 'No opens in last 3 campaigns', contactsCount: 150, creationDate: '2023-09-05' },
-];
+import { initialSegmentsMock, type Segment } from '@/lib/segment-data'; // Updated import
 
 interface AiSegmentSuggestion {
   id: string;
@@ -66,15 +52,15 @@ export default function SegmentsPage() {
       id: `seg-${Date.now()}-${Math.random().toString(36).substring(7)}`,
       name: suggestion.name,
       criteria: suggestion.criteriaExample,
-      contactsCount: 0, // Initial contact count set to 0
-      creationDate: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD format
+      contactsCount: 0, 
+      creationDate: new Date().toLocaleDateString('en-CA'), 
     };
 
     setSegments(prevSegments => [newSegment, ...prevSegments]);
 
     toast({
       title: "Segment Created (Simulation)",
-      description: `Segment "${suggestion.name}" created from AI suggestion and added to the list. Contact count will update based on criteria.`,
+      description: `Segment "${suggestion.name}" created. Contact count will update based on criteria (in a real app).`,
     });
     setIsAiSuggestModalOpen(false);
   };
@@ -180,7 +166,7 @@ export default function SegmentsPage() {
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">{segment.creationDate}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                           <Button variant="link" size="sm" className="p-0 h-auto" asChild>
-                            <Link href={`/email-marketing/segments/${segment.id}`}>Edit/View</Link>
+                            <Link href={`/email-marketing/segments/${segment.id}/contacts`}>Edit/View</Link>
                           </Button>
                            <Button variant="link" size="sm" className="p-0 h-auto ml-2 text-destructive hover:text-destructive/80" onClick={() => toast({title: 'Delete Action (Simulation)', description: `Simulating delete for segment: ${segment.name}`})}>
                             Delete
