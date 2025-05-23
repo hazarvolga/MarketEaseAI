@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useTransition } from 'react';
+import React, { useState, useMemo, useTransition, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Button } from '@/components/ui/button';
 import { Calendar as ShadcnCalendar } from '@/components/ui/calendar';
@@ -37,6 +37,11 @@ import {
   Loader2,
   Copy,
   AlertCircle,
+  Youtube,
+  MessageSquare,
+  Image as ImageIconLucide,
+  Filter as FilterIcon,
+  PanelLeft,
 } from 'lucide-react';
 import {
   format,
@@ -106,7 +111,6 @@ const getPlatformIcon = (platformId: string) => {
     return <GripVertical className="h-3 w-3 mr-1 opacity-50 cursor-grab" />;
 };
 
-
 const mockEventsThisWeek: MockEvent[] = [
   { id: '1', title: 'FB: New Feature Launch!', startTime: '08:30', endTime: '09:30', dayIndex: 0, platformId: 'facebook', description: "Announcing our latest feature that will revolutionize your workflow. #NewFeature #Innovation", status: "Scheduled" },
   { id: '2', title: 'IG: Behind the Scenes Reel', startTime: '08:45', endTime: '09:15', dayIndex: 0, platformId: 'instagram', description: "A quick look at what we're working on this week! #BTS #CompanyCulture", status: "Scheduled" },
@@ -117,13 +121,11 @@ const mockEventsThisWeek: MockEvent[] = [
   { id: '7', title: 'Task: Design Social Graphics', startTime: '08:15', endTime: '09:45', dayIndex: 3, platformId: 'tasks', description: "Create graphics for next week's social media posts.", status: "Scheduled" },
 ];
 
-
 const timeSlots = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 
 const mockBrandProfileData: Partial<GenerateMarketingContentInput> = {
   brandCorePurpose: "To empower design and engineering professionals with intuitive, powerful, and integrated software tools that enhance creativity, precision, and project efficiency.",
   customerValueProposition: "Our platform offers cutting-edge solutions for architects and civil engineers, streamlining complex design, analysis, and collaboration processes from concept to construction.",
-  // Add other relevant fields if your AI prompt uses them, otherwise keep it minimal
 };
 
 
@@ -152,7 +154,17 @@ export default function NewCalendarPage() {
   const [isQuickAddAiLoading, setIsQuickAddAiLoading] = useState(false);
   const [quickAddAiError, setQuickAddAiError] = useState<string | null>(null);
   const [isAiTransitionPending, startAiTransition] = useTransition();
+  const [currentTime, setCurrentTime] = React.useState<string | null>(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    setCurrentTime(format(new Date(), 'h:mm a'));
+    // Optional: For a live clock
+    // const timerId = setInterval(() => {
+    //   setCurrentTime(format(new Date(), 'h:mm a'));
+    // }, 1000 * 60); // Update every minute
+    // return () => clearInterval(timerId);
+  }, []);
 
   const weekStartsOn = 0; 
 
@@ -197,6 +209,7 @@ export default function NewCalendarPage() {
     if (date) {
       setSelectedDate(date);
       setCurrentDate(date); 
+      if (viewMode === 'Month') setViewMode('Day'); // Optionally switch to Day view on month click
     }
   };
   
@@ -304,7 +317,7 @@ export default function NewCalendarPage() {
 
   const handleUseQuickAddAiSuggestion = (suggestion: string) => {
     setQuickAddCaption(suggestion);
-    setShowQuickAddAiHelper(false); // Optionally hide AI helper after use
+    setShowQuickAddAiHelper(false); 
     toast({
       title: "Suggestion Applied",
       description: "AI suggestion has been added to your caption.",
@@ -330,9 +343,12 @@ export default function NewCalendarPage() {
 
   return (
     <MainLayout pageTitle="Calendar">
-      <div className="flex h-[calc(100vh-4rem)]"> {/* Adjust height based on your header */}
-        {/* Left Sidebar */}
-        <div className="w-64 border-r border-border p-4 space-y-4 overflow-y-auto bg-card text-card-foreground flex-shrink-0">
+      <div className="flex h-[calc(100vh-4rem)]"> 
+        {/* Left Sidebar - Hidden on md and smaller, toggled by button */}
+         <div className={cn(
+            "w-64 border-r border-border p-4 space-y-4 overflow-y-auto bg-card text-card-foreground flex-shrink-0 transition-all duration-300 ease-in-out md:block",
+            isMobileSidebarOpen ? "block fixed inset-y-0 left-0 z-50 md:static" : "hidden" 
+          )}>
           <Button className="w-full justify-center" onClick={() => handleSlotClick(new Date(), format(new Date(), "HH:mm"))}>
             <Plus className="mr-2 h-4 w-4" /> Create
           </Button>
@@ -343,7 +359,7 @@ export default function NewCalendarPage() {
             className="rounded-md border shadow-sm"
           />
           <div className="space-y-1 text-sm">
-            <p>New York Time <span className="float-right font-medium">{format(new Date(), 'h:mm a')}</span></p>
+            <p>New York Time <span className="float-right font-medium">{currentTime !== null ? currentTime : "--:-- --"}</span></p>
           </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -373,20 +389,29 @@ export default function NewCalendarPage() {
         {/* Main Calendar Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Calendar Header */}
-          <header className="flex items-center justify-between p-3 border-b border-border flex-shrink-0">
-            <div className="flex items-center gap-2">
+          <header className="flex flex-col sm:flex-row items-center justify-between p-3 border-b border-border flex-shrink-0 gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+               <Button variant="outline" size="icon" className="md:hidden h-9 w-9" onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}>
+                <PanelLeft className="h-5 w-5" />
+                <span className="sr-only">Toggle Filters</span>
+              </Button>
               <CalendarIcon className="h-6 w-6 text-primary" />
               <span className="text-xl font-semibold">Calendar</span>
               <Button variant="outline" size="sm" onClick={handleToday}>Today</Button>
               <Button variant="ghost" size="icon" onClick={handlePrev}><ChevronLeft className="h-5 w-5" /></Button>
               <Button variant="ghost" size="icon" onClick={handleNext}><ChevronRight className="h-5 w-5" /></Button>
-              <h2 className="text-lg font-medium ml-2">
+              <h2 className="text-lg font-medium ml-2 hidden sm:block">
                 {viewMode === 'Month' && format(currentDate, "MMMM yyyy")}
                 {viewMode === 'Week' && `${format(startOfWeek(currentDate, { weekStartsOn }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn }), "MMM d, yyyy")}`}
                 {viewMode === 'Day' && format(currentDate, "MMMM d, yyyy")}
               </h2>
             </div>
-            <div className="flex items-center gap-2">
+            <h2 className="text-lg font-medium sm:hidden text-center w-full">
+                {viewMode === 'Month' && format(currentDate, "MMMM yyyy")}
+                {viewMode === 'Week' && `${format(startOfWeek(currentDate, { weekStartsOn }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn }), "MMM d, yyyy")}`}
+                {viewMode === 'Day' && format(currentDate, "MMMM d, yyyy")}
+            </h2>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-normal">
               <Button variant="ghost" size="icon"><Search className="h-5 w-5 text-muted-foreground" /></Button>
               <Button variant="ghost" size="icon"><HelpCircle className="h-5 w-5 text-muted-foreground" /></Button>
               <Button variant="ghost" size="icon"><Settings2 className="h-5 w-5 text-muted-foreground" /></Button>
@@ -402,11 +427,11 @@ export default function NewCalendarPage() {
               </DropdownMenu>
             </div>
           </header>
-
-          {/* Week View */}
-          {viewMode === 'Week' && (
-            <div className="flex-1 overflow-auto p-1">
-              <div className="grid grid-cols-1 md:grid-cols-[auto_repeat(7,minmax(0,1fr))] min-w-[800px]">
+          
+          <div className="flex-1 overflow-x-auto"> {/* Allow x-scroll for calendar grid */}
+            {/* Week View */}
+            {viewMode === 'Week' && (
+              <div className="grid grid-cols-1 md:grid-cols-[auto_repeat(7,minmax(0,1fr))] min-w-[800px] p-1">
                 <div className="text-xs text-muted-foreground text-right pr-2 py-1 sticky top-0 bg-background z-10 border-b md:border-r">GMT-0</div>
                 {daysInView.slice(0,7).map((day) => ( 
                   <div key={`header-${day.toString()}`} className="text-center border-b border-l py-1 sticky top-0 bg-background z-10">
@@ -478,13 +503,11 @@ export default function NewCalendarPage() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Day View */}
-          {viewMode === 'Day' && (
-            <div className="flex-1 overflow-auto p-1">
-              <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] min-w-[400px]">
+            {/* Day View */}
+            {viewMode === 'Day' && (
+              <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] min-w-[400px] p-1">
                  <div className="text-xs text-muted-foreground text-right pr-2 py-1 sticky top-0 bg-background z-10 border-b md:border-r">GMT-0</div>
                 <div className="text-center border-b border-l py-1 sticky top-0 bg-background z-10">
                   <div className={cn("text-xs uppercase", isToday(currentDate) && "text-primary")}>
@@ -551,57 +574,56 @@ export default function NewCalendarPage() {
                   })}
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Month View */}
-          {viewMode === 'Month' && (
-             <div className="flex-1 overflow-auto p-1">
-              <div className="grid grid-cols-7 border-t border-l">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(dayName => (
-                  <div key={dayName} className="p-2 text-center text-xs font-medium text-muted-foreground border-b border-r h-10 flex items-center justify-center">
-                    {dayName}
-                  </div>
-                ))}
-                {Array.from({ length: getDay(startOfMonth(currentDate)) }).map((_, i) => (
-                  <div key={`empty-start-${i}`} className="h-28 border-b border-r bg-muted/30"></div>
-                ))}
-                {eachDayOfInterval({ start: startOfMonth(currentDate), end: endOfMonth(currentDate) }).map(day => (
-                  <div 
-                    key={day.toString()} 
-                    className={cn(
-                      "h-28 p-1.5 border-b border-r relative hover:bg-muted/50 transition-colors text-sm overflow-hidden cursor-pointer",
-                      !isSameMonth(day, currentDate) && "bg-muted/30 text-muted-foreground/60"
-                    )}
-                    onClick={() => { setCurrentDate(day); setSelectedDate(day); setViewMode('Day');}}
-                  >
-                    <span className={cn(
-                      "block text-right mb-1", 
-                      isToday(day) && "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center ml-auto -mr-0.5 -mt-0.5"
-                    )}>
-                      {format(day, 'd')}
-                    </span>
-                    <div className="space-y-0.5">
-                      {eventsForDayInMonth(day).slice(0, 2).map(event => ( 
-                        <div key={`${day.toString()}-${event.id}`} className={cn("text-xs px-1 py-0.5 rounded truncate text-white", getEventColor(event.platformId))}>
-                          {event.title}
-                        </div>
-                      ))}
-                      {eventsForDayInMonth(day).length > 2 && (
-                         <div className="text-xs text-muted-foreground text-center mt-1">
-                            + {eventsForDayInMonth(day).length - 2} more
-                        </div>
-                      )}
+            )}
+            
+            {/* Month View */}
+            {viewMode === 'Month' && (
+               <div className="flex-1 overflow-auto p-1">
+                <div className="grid grid-cols-7 border-t border-l">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(dayName => (
+                    <div key={dayName} className="p-2 text-center text-xs font-medium text-muted-foreground border-b border-r h-10 flex items-center justify-center">
+                      {dayName}
                     </div>
-                  </div>
-                ))}
-                {Array.from({ length: (7 - (getDay(endOfMonth(currentDate)) + 1)) % 7 }).map((_, i) => (
-                  <div key={`empty-end-${i}`} className="h-28 border-b border-r bg-muted/30"></div>
-                ))}
+                  ))}
+                  {Array.from({ length: getDay(startOfMonth(currentDate)) }).map((_, i) => (
+                    <div key={`empty-start-${i}`} className="h-28 border-b border-r bg-muted/30"></div>
+                  ))}
+                  {eachDayOfInterval({ start: startOfMonth(currentDate), end: endOfMonth(currentDate) }).map(day => (
+                    <div 
+                      key={day.toString()} 
+                      className={cn(
+                        "h-28 p-1.5 border-b border-r relative hover:bg-muted/50 transition-colors text-sm overflow-hidden cursor-pointer",
+                        !isSameMonth(day, currentDate) && "bg-muted/30 text-muted-foreground/60"
+                      )}
+                      onClick={() => { setCurrentDate(day); setSelectedDate(day); setViewMode('Day');}}
+                    >
+                      <span className={cn(
+                        "block text-right mb-1", 
+                        isToday(day) && "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center ml-auto -mr-0.5 -mt-0.5"
+                      )}>
+                        {format(day, 'd')}
+                      </span>
+                      <div className="space-y-0.5">
+                        {eventsForDayInMonth(day).slice(0, 2).map(event => ( 
+                          <div key={`${day.toString()}-${event.id}`} className={cn("text-xs px-1 py-0.5 rounded truncate text-white", getEventColor(event.platformId))}>
+                            {event.title}
+                          </div>
+                        ))}
+                        {eventsForDayInMonth(day).length > 2 && (
+                           <div className="text-xs text-muted-foreground text-center mt-1">
+                              + {eventsForDayInMonth(day).length - 2} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {Array.from({ length: (7 - (getDay(endOfMonth(currentDate)) + 1)) % 7 }).map((_, i) => (
+                    <div key={`empty-end-${i}`} className="h-28 border-b border-r bg-muted/30"></div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-
+            )}
+          </div>
         </div>
       </div>
 
@@ -721,6 +743,5 @@ export default function NewCalendarPage() {
     </MainLayout>
   );
 }
-
 
     
