@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, ImageIcon, Palette, Speaker, Link as LinkIcon, Briefcase, Settings2, ShieldCheck, Paperclip, Building2, Check, ChevronsUpDown, Sparkles as SparklesIcon } from 'lucide-react';
+import { FileText, ImageIcon as ImageIconLucide, Palette, Speaker, Link as LinkIcon, Briefcase, Settings2, ShieldCheck, Paperclip, Building2, Check, ChevronsUpDown, Sparkles as SparklesIcon } from 'lucide-react'; // Ensure SparklesIcon is imported
 import {
   Popover,
   PopoverContent,
@@ -25,7 +25,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox import
+import { Checkbox } from "@/components/ui/checkbox";
 
 const industryOptions = [
   { value: "technology", label: "Technology (SaaS, Hardware, IT)" },
@@ -65,7 +65,7 @@ export default function BrandProfilePage() {
   const [aiBriefCorePurpose, setAiBriefCorePurpose] = React.useState("To empower design and engineering professionals with intuitive, powerful, and integrated software tools that enhance creativity, precision, and project efficiency.");
   const [aiBriefCustomerValue, setAiBriefCustomerValue] = React.useState("Our platform offers cutting-edge solutions for architects and civil engineers, streamlining complex design, analysis, and collaboration processes from concept to construction.");
   const [aiBriefFocusedProduct, setAiBriefFocusedProduct] = React.useState("ArchModeler Pro Suite");
-  const [aiBriefPriorityPlatforms, setAiBriefPriorityPlatforms] = React.useState({
+  const [aiBriefPriorityPlatforms, setAiBriefPriorityPlatforms] = React.useState<Record<string, boolean>>({ // Explicit type
     instagram: false, facebook: true, linkedin: true, twitter: false,
     pinterest: false, youtube: true, tiktok: false, companyBlog: true,
   });
@@ -81,6 +81,12 @@ export default function BrandProfilePage() {
   const { toast } = useToast();
 
   const handleSaveChanges = () => {
+    // In a real app, you'd collect all form data here and send it to a backend
+    console.log("Simulating save for brand profile data:", {
+      businessCategoryValue,
+      aiBriefCorePurpose,
+      // ... log other state variables
+    });
     toast({
       title: "Profile Saved (Simulation)",
       description: "Your brand profile changes have been noted.",
@@ -89,7 +95,7 @@ export default function BrandProfilePage() {
   };
 
   return (
-    <MainLayout pageTitle="Manage Your Brand Profile">
+    <MainLayout pageTitle="Brand Identity & Strategy">
       <div className="space-y-8">
         <Card className="shadow-lg">
           <CardHeader>
@@ -101,23 +107,24 @@ export default function BrandProfilePage() {
         </Card>
 
         <Tabs defaultValue="basic-info" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-1 mb-6 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-1 mb-6 h-auto">
             <TabsTrigger value="basic-info" className="py-2 text-xs sm:text-sm">1. Basic Info</TabsTrigger>
-            <TabsTrigger value="visual-identity" className="py-2 text-xs sm:text-sm">2. Visuals</TabsTrigger>
-            <TabsTrigger value="tone-language" className="py-2 text-xs sm:text-sm">3. Tone/Lang</TabsTrigger>
-            <TabsTrigger value="digital-presence" className="py-2 text-xs sm:text-sm">4. Digital</TabsTrigger>
-            <TabsTrigger value="product-service" className="py-2 text-xs sm:text-sm">5. Products</TabsTrigger>
-            <TabsTrigger value="ai-strategic-briefing" className="py-2 text-xs sm:text-sm">6. AI Briefing</TabsTrigger>
-            <TabsTrigger value="ai-prefs" className="py-2 text-xs sm:text-sm">7. AI Prefs</TabsTrigger>
-            <TabsTrigger value="legal" className="py-2 text-xs sm:text-sm">8. Legal</TabsTrigger>
-            <TabsTrigger value="attachments" className="py-2 text-xs sm:text-sm">9. Files</TabsTrigger>
+            <TabsTrigger value="ai-strategic-briefing" className="py-2 text-xs sm:text-sm">2. AI Briefing</TabsTrigger>
+            <TabsTrigger value="brand-brief" className="py-2 text-xs sm:text-sm">3. Brand Brief</TabsTrigger>
+            <TabsTrigger value="visual-identity" className="py-2 text-xs sm:text-sm">4. Visuals</TabsTrigger>
+            <TabsTrigger value="tone-language" className="py-2 text-xs sm:text-sm">5. Tone/Lang</TabsTrigger>
+            <TabsTrigger value="digital-presence" className="py-2 text-xs sm:text-sm">6. Digital</TabsTrigger>
+            <TabsTrigger value="product-service" className="py-2 text-xs sm:text-sm">7. Products</TabsTrigger>
+            <TabsTrigger value="ai-prefs" className="py-2 text-xs sm:text-sm">8. AI Prefs</TabsTrigger>
+            <TabsTrigger value="legal" className="py-2 text-xs sm:text-sm">9. Legal</TabsTrigger>
+            <TabsTrigger value="attachments" className="py-2 text-xs sm:text-sm">10. Files</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic-info">
-            <Card className="shadow-lg">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
-                  <FileText className="h-6 w-6 mr-3 text-primary" />
+                  <Building2 className="h-6 w-6 mr-3 text-primary" />
                   1. Basic Brand Information
                 </CardTitle>
               </CardHeader>
@@ -138,14 +145,14 @@ export default function BrandProfilePage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="businessCategory">Business Category</Label>
+                    <Label htmlFor="businessCategoryCombobox">Business Category</Label>
                     <Popover open={openBusinessCategory} onOpenChange={setOpenBusinessCategory}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           role="combobox"
+                          id="businessCategoryCombobox"
                           aria-expanded={openBusinessCategory}
-                          id="businessCategory"
                           className="w-full justify-between"
                         >
                           {businessCategoryValue
@@ -223,13 +230,116 @@ export default function BrandProfilePage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="ai-strategic-briefing">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center text-xl">
+                  <SparklesIcon className="h-6 w-6 mr-3 text-primary" />
+                  2. AI Strategic Briefing
+                </CardTitle>
+                <CardDescription>
+                  Provide strategic context for AI content generation. This supplements other Brand Profile sections.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="aiBriefCorePurpose">Brand's Core Purpose (for AI context)</Label>
+                    <Textarea id="aiBriefCorePurpose" value={aiBriefCorePurpose} onChange={(e) => setAiBriefCorePurpose(e.target.value)} placeholder="e.g., To empower architects and designers..." rows={3} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="aiBriefCustomerValue">Main Value to Customers (for AI context)</Label>
+                    <Textarea id="aiBriefCustomerValue" value={aiBriefCustomerValue} onChange={(e) => setAiBriefCustomerValue(e.target.value)} placeholder="e.g., We provide a user-friendly yet capable design suite..." rows={3} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="aiBriefFocusedProduct">Focused Product/Service (for current AI tasks)</Label>
+                  <Input id="aiBriefFocusedProduct" value={aiBriefFocusedProduct} onChange={(e) => setAiBriefFocusedProduct(e.target.value)} placeholder="e.g., Our new integrated design software" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Priority Social Media Platforms (for AI content direction)</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pt-2">
+                    {platformOptions.map((platform) => (
+                      <div key={platform.id} className="flex flex-row items-center space-x-2">
+                        <Checkbox
+                          id={`aiBrief-${platform.id}`}
+                          checked={aiBriefPriorityPlatforms[platform.id as keyof typeof aiBriefPriorityPlatforms]}
+                          onCheckedChange={(checked) => {
+                            setAiBriefPriorityPlatforms(prev => ({ ...prev, [platform.id]: !!checked }));
+                          }}
+                        />
+                        <Label htmlFor={`aiBrief-${platform.id}`} className="font-normal text-sm cursor-pointer">
+                          {platform.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="aiBriefCampaignPeriods">Campaign Periods / Date Ranges (Optional)</Label>
+                    <Textarea id="aiBriefCampaignPeriods" value={aiBriefCampaignPeriods} onChange={(e) => setAiBriefCampaignPeriods(e.target.value)} placeholder="e.g., New version launch (Oct-Nov), Pre-Summer sale (May 15-30)" rows={2} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="aiBriefDesiredEmotion">Desired User Emotion to Evoke (Optional)</Label>
+                    <Input id="aiBriefDesiredEmotion" value={aiBriefDesiredEmotion} onChange={(e) => setAiBriefDesiredEmotion(e.target.value)} placeholder="e.g., Empowered, Confident, Inspired" />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="aiBriefFaqs">Frequently Asked Questions & Answers (Optional)</Label>
+                  <Textarea id="aiBriefFaqs" value={aiBriefFaqs} onChange={(e) => setAiBriefFaqs(e.target.value)} placeholder="e.g., Q: What are the system requirements? A: ..." rows={4} />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="aiBriefCompetitorInspirations">Competitor Content Inspirations (and why - Optional)</Label>
+                  <Textarea id="aiBriefCompetitorInspirations" value={aiBriefCompetitorInspirations} onChange={(e) => setAiBriefCompetitorInspirations(e.target.value)} placeholder="e.g., Competitor X's video series for clarity." rows={3} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="aiBriefAdditionalInfo">Additional Strategic Info (General - Optional)</Label>
+                  <Textarea id="aiBriefAdditionalInfo" value={aiBriefAdditionalInfo} onChange={(e) => setAiBriefAdditionalInfo(e.target.value)} placeholder="Any other general details for AI..." rows={3} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="aiBriefBrandKeywords">Brand Keywords (Optional)</Label>
+                  <Textarea id="aiBriefBrandKeywords" value={aiBriefBrandKeywords} onChange={(e) => setAiBriefBrandKeywords(e.target.value)} placeholder="e.g., sustainable fashion, AI marketing" rows={2} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="aiBriefThingsToAvoid">Things to Avoid (Tone/Topic/Words - Optional)</Label>
+                  <Textarea id="aiBriefThingsToAvoid" value={aiBriefThingsToAvoid} onChange={(e) => setAiBriefThingsToAvoid(e.target.value)} placeholder="e.g., Avoid overly technical jargon, no negative competitor talk" rows={3} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="aiBriefUsps">Unique Selling Propositions (USPs - Optional)</Label>
+                  <Textarea id="aiBriefUsps" value={aiBriefUsps} onChange={(e) => setAiBriefUsps(e.target.value)} placeholder="e.g., Patented tech, 24/7 support" rows={3} />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="brand-brief">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center text-xl">
+                  <FileText className="h-6 w-6 mr-3 text-primary" />
+                  3. Brand Brief
+                </CardTitle>
+                <CardDescription>
+                  This section will contain key strategic briefing points for the brand. Content to be added.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Placeholder content for Brand Brief.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="visual-identity">
-            {/* Content for Visual Identity - remains the same */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                   <Palette className="h-6 w-6 mr-3 text-primary" />
-                  2. Visual Identity
+                  4. Visual Identity
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -319,12 +429,11 @@ export default function BrandProfilePage() {
           </TabsContent>
           
           <TabsContent value="tone-language">
-             {/* Content for Tone of Voice & Language - remains the same */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <Speaker className="h-6 w-6 mr-3 text-primary" />
-                    3. Tone of Voice & Language
+                    5. Tone of Voice & Language
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -349,12 +458,11 @@ export default function BrandProfilePage() {
           </TabsContent>
 
           <TabsContent value="digital-presence">
-            {/* Content for Social & Digital Presence - remains the same */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <LinkIcon className="h-6 w-6 mr-3 text-primary" />
-                    4. Social & Digital Presence
+                    6. Social & Digital Presence
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -402,12 +510,11 @@ export default function BrandProfilePage() {
           </TabsContent>
 
           <TabsContent value="product-service">
-             {/* Content for Product/Service Details - remains the same */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <Briefcase className="h-6 w-6 mr-3 text-primary" />
-                    5. Product / Service Details
+                    7. Product / Service Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -435,94 +542,12 @@ export default function BrandProfilePage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="ai-strategic-briefing">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center text-xl">
-                  <SparklesIcon className="h-6 w-6 mr-3 text-primary" />
-                  6. AI Strategic Briefing
-                </CardTitle>
-                <CardDescription>
-                  Provide strategic context for AI content generation. This supplements other Brand Profile sections.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefCorePurpose">Brand's Core Purpose (for AI context)</Label>
-                  <Textarea id="aiBriefCorePurpose" value={aiBriefCorePurpose} onChange={(e) => setAiBriefCorePurpose(e.target.value)} placeholder="e.g., To empower architects and designers..." rows={3} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefCustomerValue">Main Value to Customers (for AI context)</Label>
-                  <Textarea id="aiBriefCustomerValue" value={aiBriefCustomerValue} onChange={(e) => setAiBriefCustomerValue(e.target.value)} placeholder="e.g., We provide a user-friendly yet capable design suite..." rows={3} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefFocusedProduct">Focused Product/Service (for current AI tasks)</Label>
-                  <Input id="aiBriefFocusedProduct" value={aiBriefFocusedProduct} onChange={(e) => setAiBriefFocusedProduct(e.target.value)} placeholder="e.g., Our new integrated design software" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Priority Social Media Platforms (for AI content direction)</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pt-2">
-                    {platformOptions.map((platform) => (
-                      <div key={platform.id} className="flex flex-row items-center space-x-3">
-                        <Checkbox
-                          id={`aiBrief-${platform.id}`}
-                          checked={aiBriefPriorityPlatforms[platform.id as keyof typeof aiBriefPriorityPlatforms]}
-                          onCheckedChange={(checked) => {
-                            setAiBriefPriorityPlatforms(prev => ({ ...prev, [platform.id]: !!checked }));
-                          }}
-                        />
-                        <Label htmlFor={`aiBrief-${platform.id}`} className="font-normal text-sm">
-                          {platform.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefCampaignPeriods">Campaign Periods / Date Ranges (Optional)</Label>
-                  <Textarea id="aiBriefCampaignPeriods" value={aiBriefCampaignPeriods} onChange={(e) => setAiBriefCampaignPeriods(e.target.value)} placeholder="e.g., New version launch (Oct-Nov), Pre-Summer sale (May 15-30)" rows={2} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefFaqs">Frequently Asked Questions & Answers (Optional)</Label>
-                  <Textarea id="aiBriefFaqs" value={aiBriefFaqs} onChange={(e) => setAiBriefFaqs(e.target.value)} placeholder="e.g., Q: What are the system requirements? A: ..." rows={4} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefDesiredEmotion">Desired User Emotion to Evoke (Optional)</Label>
-                  <Input id="aiBriefDesiredEmotion" value={aiBriefDesiredEmotion} onChange={(e) => setAiBriefDesiredEmotion(e.target.value)} placeholder="e.g., Empowered, Confident, Inspired" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefCompetitorInspirations">Competitor Content Inspirations (and why - Optional)</Label>
-                  <Textarea id="aiBriefCompetitorInspirations" value={aiBriefCompetitorInspirations} onChange={(e) => setAiBriefCompetitorInspirations(e.target.value)} placeholder="e.g., Competitor X's video series for clarity." rows={3} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefAdditionalInfo">Additional Strategic Info (General - Optional)</Label>
-                  <Textarea id="aiBriefAdditionalInfo" value={aiBriefAdditionalInfo} onChange={(e) => setAiBriefAdditionalInfo(e.target.value)} placeholder="Any other general details for AI..." rows={3} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefBrandKeywords">Brand Keywords (Optional)</Label>
-                  <Textarea id="aiBriefBrandKeywords" value={aiBriefBrandKeywords} onChange={(e) => setAiBriefBrandKeywords(e.target.value)} placeholder="e.g., sustainable fashion, AI marketing" rows={2} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefThingsToAvoid">Things to Avoid (Tone/Topic/Words - Optional)</Label>
-                  <Textarea id="aiBriefThingsToAvoid" value={aiBriefThingsToAvoid} onChange={(e) => setAiBriefThingsToAvoid(e.target.value)} placeholder="e.g., Avoid overly technical jargon, no negative competitor talk" rows={3} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aiBriefUsps">Unique Selling Propositions (USPs - Optional)</Label>
-                  <Textarea id="aiBriefUsps" value={aiBriefUsps} onChange={(e) => setAiBriefUsps(e.target.value)} placeholder="e.g., Patented tech, 24/7 support" rows={3} />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="ai-prefs">
-            {/* Content for AI-Specific Preferences - remains the same */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <Settings2 className="h-6 w-6 mr-3 text-primary" />
-                    7. AI-Specific Preferences (Output Control)
+                    8. AI-Specific Preferences (Output Control)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -551,12 +576,11 @@ export default function BrandProfilePage() {
           </TabsContent>
 
           <TabsContent value="legal">
-            {/* Content for Legal & Compliance - remains the same */}
-             <Card className="shadow-lg">
+             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <ShieldCheck className="h-6 w-6 mr-3 text-primary" />
-                    8. Legal & Compliance
+                    9. Legal & Compliance
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -581,12 +605,11 @@ export default function BrandProfilePage() {
           </TabsContent>
 
           <TabsContent value="attachments">
-            {/* Content for File Attachments - remains the same */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <Paperclip className="h-6 w-6 mr-3 text-primary" />
-                    9. File Attachments & Resources
+                    10. File Attachments & Resources
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -611,10 +634,10 @@ export default function BrandProfilePage() {
           </TabsContent>
         </Tabs>
 
-        <CardFooter className="mt-8">
+        <CardFooter className="mt-8 flex justify-start">
           <Button 
             size="lg" 
-            className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
+            className="w-full md:w-auto" // Ensure button is full width on small screens
             onClick={handleSaveChanges}
           >
             Save Brand Profile Changes
@@ -624,3 +647,6 @@ export default function BrandProfilePage() {
     </MainLayout>
   );
 }
+
+
+    
