@@ -4,19 +4,19 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import Image from 'next/image';
 import { 
   Users, MessageSquare, ThumbsUp, Share2, UserPlus, BarChart3, FileText, CalendarDays, Edit3, Bell, AlertCircle,
-  Instagram, Facebook, Linkedin, Youtube, Twitter as TwitterIcon, CheckCircle, UserCircle as UserCircleIcon,
-  LayoutDashboard, // Added for consistency
-  ImageIcon, // Added for consistency
-  Settings2, // Added for consistency
-  ListChecks, // Added for consistency
-  Spline, // Added for consistency
-  Send // Added for consistency
+  Instagram, Facebook, Linkedin, Twitter as TwitterIcon, CheckCircle, UserCircle as UserCircleIcon,
+  LayoutDashboard, 
+  ImageIcon, 
+  Settings2, 
+  ListChecks, 
+  Spline, 
+  Send,
+  Cog // Added Cog for system settings link
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import React, { useState, useEffect, useMemo } from 'react'; // Added useEffect
+import React, { useState, useEffect } from 'react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -46,15 +46,6 @@ const chartConfig = {
     color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig;
-
-
-// Mock data for connected accounts
-const connectedAccountsMock = [
-  { id: 'ig', name: 'Instagram', icon: <Instagram className="h-6 w-6 text-pink-500" />, username: '@marketmaestro_ig', status: 'connected' },
-  { id: 'fb', name: 'Facebook', icon: <Facebook className="h-6 w-6 text-blue-600" />, username: 'MarketMaestro Official', status: 'connected' },
-  { id: 'li', name: 'LinkedIn', icon: <Linkedin className="h-6 w-6 text-sky-700" />, username: 'MarketMaestro Inc.', status: 'connected' },
-  { id: 'tw', name: 'X (Twitter)', icon: <TwitterIcon className="h-6 w-6 text-foreground" />, username: '@MarketMaestroX', status: 'needs_reauth' },
-];
 
 // Mock data for upcoming posts
 const upcomingPostsMock = [
@@ -120,34 +111,24 @@ export default function SocialMediaDashboardPage() {
 
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-xl">Connected Accounts</CardTitle>
-            <CardDescription>Manage and view status of your linked social media profiles.</CardDescription>
+            <CardTitle className="text-xl">Manage Social Accounts</CardTitle>
+            <CardDescription>Connect and manage your brand's social media profiles in System Configuration.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {connectedAccountsMock.map(account => (
-                <Card key={account.id} className="shadow-sm hover:shadow-md transition-shadow duration-200">
-                  <CardContent className="p-4 flex flex-col items-center text-center space-y-2">
-                    {account.icon}
-                    <p className="font-semibold text-sm">{account.name}</p>
-                    <p className="text-xs text-muted-foreground">{account.username}</p>
-                    <div className={`text-xs px-2 py-0.5 rounded-full ${account.status === 'connected' ? 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200' : 'bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-200'}`}>
-                      {account.status === 'connected' ? 'Connected' : 'Needs Re-auth'}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-               <Button variant="outline" className="w-full h-full border-dashed hover:border-primary hover:text-primary flex flex-col items-center justify-center py-4 text-muted-foreground">
-                <UserPlus className="h-8 w-8 mb-2" />
-                <span className="text-sm">Connect New Account</span>
-              </Button>
-            </div>
+            <Button asChild variant="outline">
+              <Link href="/admin/settings">
+                <Cog className="mr-2 h-4 w-4" /> Go to System Configuration
+              </Link>
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Navigate to the "Social Accounts" tab in System Configuration to manage your connections.
+            </p>
           </CardContent>
         </Card>
 
         <div className="flex justify-start space-x-2 py-2">
           {(['daily', 'weekly', 'monthly'] as Timeframe[]).map((tf) => (
-            <Button key={tf} variant={selectedTimeframe === tf ? 'default' : 'outline'} onClick={() => setSelectedTimeframe(tf)} className="capitalize">
+            <Button key={tf} variant={selectedTimeframe === tf ? 'default' : 'outline'} onClick={() => setSelectedTimeframe(tf)} className="capitalize text-xs h-8 px-3">
               {tf}
             </Button>
           ))}
@@ -232,13 +213,12 @@ export default function SocialMediaDashboardPage() {
                             backgroundColor: "hsl(var(--background))", 
                             borderColor: "hsl(var(--border))",
                             borderRadius: "var(--radius)",
-                            boxShadow: "var(--card-shadow, 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1))" 
                         }}
                         labelStyle={{color: "hsl(var(--foreground))"}}
                         itemStyle={{color: "hsl(var(--foreground))"}}
                         content={<ChartTooltipContent />}
                       />
-                      <ChartLegend content={<ChartLegendContent />} />
+                      <ChartLegend icon={LineChart} content={<ChartLegendContent />} />
                       <Line type="monotone" dataKey="engagement" stroke="var(--color-engagement)" strokeWidth={2} dot={{r:4, fill: "var(--color-engagement)", strokeWidth:1}} activeDot={{r:6, strokeWidth:2}}/>
                       <Line type="monotone" dataKey="followers" stroke="var(--color-followers)" strokeWidth={2} dot={{r:4, fill: "var(--color-followers)", strokeWidth:1}} activeDot={{r:6, strokeWidth:2}}/>
                     </LineChart>
@@ -277,7 +257,7 @@ export default function SocialMediaDashboardPage() {
                 <p className="text-sm text-muted-foreground">No posts scheduled yet.</p>
               )}
               <Button variant="outline" className="w-full mt-4" asChild>
-                <Link href="/social-media/scheduled-posts">View Full Calendar</Link>
+                <Link href="/calendar">View Full Calendar</Link>
               </Button>
             </CardContent>
           </Card>
@@ -330,3 +310,5 @@ export default function SocialMediaDashboardPage() {
     </MainLayout>
   );
 }
+
+    
