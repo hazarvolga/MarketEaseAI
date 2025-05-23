@@ -37,7 +37,7 @@ import {
   FileCog,
   UsersRound,
   Mail,
-  Settings as SettingsIcon, // Renamed to avoid conflict with component name
+  Settings as SettingsIcon,
   Send as SendIcon,
   ServerCog,
   PanelLeft,
@@ -46,7 +46,8 @@ import {
   Users as UsersIconLucide,
   Briefcase,
   Smartphone,
-  Plug, // Added for Integrations tab
+  Plug,
+  BarChartBig, // Added BarChartBig
 } from 'lucide-react';
 import {
   Dialog,
@@ -299,18 +300,21 @@ export default function SystemConfigurationPage() {
   const [smtpUser, setSmtpUser] = React.useState("");
   const [smtpPassword, setSmtpPassword] = React.useState("");
   const [smtpEncryption, setSmtpEncryption] = React.useState("tls");
-  const [apiKey, setApiKey] = React.useState("");
-  const [apiSecret, setApiSecret] = React.useState("");
+  const [apiKey, setApiKey] = React.useState(""); // For API-based email services
+  const [apiSecret, setApiSecret] = React.useState(""); // For API-based email services
   const [sesAccessKey, setSesAccessKey] = React.useState("");
   const [sesSecretKey, setSesSecretKey] = React.useState("");
   const [sesRegion, setSesRegion] = React.useState("us-east-1");
   const [sesVerifiedIdentity, setSesVerifiedIdentity] = React.useState("");
-  const [sendingDomain, setSendingDomain] = React.useState("");
+  const [sendingDomain, setSendingDomain] = React.useState(""); // For some API services
 
-  const [configuredDashboardChannels, setConfiguredDashboardChannels] = React.useState<ConfiguredSocialChannel[]>([]);
+  const [configuredDashboardChannels, setConfiguredDashboardChannels] = React.useState<string[]>([]);
+  const [configuredSocialAccounts, setConfiguredSocialAccounts] = React.useState<ConfiguredSocialChannel[]>([]);
   const [openPlatformCombobox, setOpenPlatformCombobox] = React.useState(false);
   const [platformSearchValue, setPlatformSearchValue] = React.useState("");
   const [expandedChannelId, setExpandedChannelId] = React.useState<string | null>(null);
+  const [manageModalChannel, setManageModalChannel] = React.useState<ConfiguredSocialChannel | null>(null);
+
 
   const [selectedStorageProviderId, setSelectedStorageProviderId] = React.useState<string | null>(null);
   const [storageConfigInputs, setStorageConfigInputs] = React.useState<Record<string, string>>({});
@@ -322,67 +326,69 @@ export default function SystemConfigurationPage() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY);
-      if (stored) {
+      const storedChannels = localStorage.getItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY);
+      if (storedChannels) {
         try {
-          // Ensure the stored data matches the expected structure and hydrate icons
-          const parsed = JSON.parse(stored) as Partial<ConfiguredSocialChannel>[]; // Allow partial during parse
-          const hydratedChannels = parsed.map(storedChannel => {
-            const basePlatform = availableSocialPlatforms.find(p => p.id === storedChannel.id);
-            if (basePlatform) {
-              return {
-                ...basePlatform, // Get icon and name from base
-                status: storedChannel.status || 'Disconnected',
-                accountIdentifier: storedChannel.accountIdentifier,
-                // oauthPermissionsExample is part of basePlatform, no need to spread again if it's already in base
-              } as ConfiguredSocialChannel;
-            }
-            return null;
-          }).filter(Boolean) as ConfiguredSocialChannel[]; // Filter out nulls and assert type
+          const parsedChannelIds: string[] = JSON.parse(storedChannels);
+          setConfiguredDashboardChannels(parsedChannelIds);
 
-          setConfiguredDashboardChannels(hydratedChannels);
+          const hydratedAccounts = parsedChannelIds.map(id => {
+            const basePlatform = availableSocialPlatforms.find(p => p.id === id);
+            // In a real app, status & accountIdentifier would come from a backend or more persistent storage
+            return {
+              ...(basePlatform || { id, name: id, icon: <Share2Icon className="h-5 w-5"/> }), // Fallback
+              status: 'Connected', // Mock status
+              accountIdentifier: `${basePlatform?.name || id} User (Mock)` // Mock identifier
+            } as ConfiguredSocialChannel;
+          });
+          setConfiguredSocialAccounts(hydratedAccounts);
+
         } catch (e) {
-          console.error("Failed to parse configured dashboard channels from localStorage", e);
-           setConfiguredDashboardChannels([]); // Fallback to empty or default
+          console.error("Failed to parse social media preferences from localStorage", e);
         }
       } else {
-         // Default if nothing in localStorage - ensure icons are present
-         setConfiguredDashboardChannels([
-            { ...availableSocialPlatforms.find(p=>p.id==='facebook')!, status: 'Connected', accountIdentifier: 'MarketMaestro Page (Mock)' },
-            { ...availableSocialPlatforms.find(p=>p.id==='instagram')!, status: 'Disconnected', accountIdentifier: undefined },
-            { ...availableSocialPlatforms.find(p=>p.id==='twitter')!, status: 'Needs Re-auth', accountIdentifier: '@MarketMaestroX (Mock)' },
-        ]);
+         // Default some accounts for demo purposes if nothing in localStorage
+         const defaultConnected = availableSocialPlatforms.slice(0, 2).map(p => ({
+           ...p,
+           status: 'Connected',
+           accountIdentifier: `${p.name} User (Mock)`
+         } as ConfiguredSocialChannel));
+         setConfiguredSocialAccounts(defaultConnected);
+         setConfiguredDashboardChannels(defaultConnected.map(p => p.id));
       }
     }
   }, []);
-
+  
   const handleAddPlatformToConfiguredList = (platform: AvailableSocialPlatform) => {
-    if (!configuredDashboardChannels.find(p => p.id === platform.id)) {
+    if (!configuredSocialAccounts.find(p => p.id === platform.id)) {
       const newChannel: ConfiguredSocialChannel = { ...platform, status: 'Disconnected', accountIdentifier: undefined };
-      setConfiguredDashboardChannels(prev => [...prev, newChannel]);
-      setExpandedChannelId(platform.id);
-      toast({ title: `${platform.name} added to configuration list. Please connect it.`});
+      setConfiguredSocialAccounts(prev => [...prev, newChannel]);
+      setExpandedChannelId(platform.id); // Open the panel for immediate connection
+      toast({ title: `${platform.name} added. Please connect it.`});
     } else {
-      toast({ title: `${platform.name} is already in your configuration list.`, variant: "default"});
+      toast({ title: `${platform.name} is already in your list.`, variant: "default"});
     }
     setPlatformSearchValue("");
     setOpenPlatformCombobox(false);
   };
 
   const handleRemoveChannelFromConfiguration = (platformId: string) => {
-    setConfiguredDashboardChannels(prev => prev.filter(p => p.id !== platformId));
+    setConfiguredSocialAccounts(prev => prev.filter(p => p.id !== platformId));
+    setConfiguredDashboardChannels(prev => prev.filter(id => id !== platformId)); // Also update dashboard selection
     if (expandedChannelId === platformId) {
       setExpandedChannelId(null);
     }
-    toast({ title: "Platform removed from configuration list."});
+    toast({ title: "Platform removed from configuration."});
   };
 
- const performConnectionAction = React.useCallback((channelId: string, actionType: 'Connect' | 'Disconnect' | 'Re-authenticate') => {
+ const performConnectionAction = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
     let toastTitle = "";
     let newStatus: ConfiguredSocialChannel['status'] = 'Disconnected';
     let newAccountIdentifier: string | undefined = undefined;
-    const channel = configuredDashboardChannels.find(c => c.id === channelId);
+    const channel = configuredSocialAccounts.find(c => c.id === channelId);
     if (!channel) return;
+
+    const actionType = currentStatus === 'Disconnected' ? 'Connect' : currentStatus === 'Needs Re-auth' ? 'Re-authenticate' : 'Connect'; // Default to connect
 
     switch (actionType) {
       case 'Connect':
@@ -390,67 +396,91 @@ export default function SystemConfigurationPage() {
         newStatus = 'Connected';
         newAccountIdentifier = `${channel.name} User (Mock)`;
         break;
-      case 'Disconnect':
-        toastTitle = `Disconnecting ${channel.name}...`;
-        newStatus = 'Disconnected';
-        newAccountIdentifier = undefined;
-        break;
       case 'Re-authenticate':
         toastTitle = `Re-authenticating ${channel.name}...`;
         newStatus = 'Connected';
         newAccountIdentifier = channel.accountIdentifier || `${channel.name} User (Mock)`;
         break;
     }
-
-    // Simulate API call
+    
+    // Simulate API call / OAuth flow
     setTimeout(() => {
-      setConfiguredDashboardChannels(prevChannels =>
+      setConfiguredSocialAccounts(prevChannels =>
         prevChannels.map(ch =>
           ch.id === channelId ? { ...ch, status: newStatus, accountIdentifier: newAccountIdentifier } : ch
         )
       );
-      // Don't close the panel if the action was from within the panel for 'Connect' or 'Re-authenticate'
-      // Only close it if it was a 'Disconnect' from the main row or a 'Manage' toggle.
-      // For this prototype, we'll close it for Connect/Re-auth from panel, but keep it for Disconnect from main row.
-      if (actionType === 'Connect' || actionType === 'Re-authenticate') {
-           setExpandedChannelId(null);
-      }
+      setExpandedChannelId(null); // Close panel after action
       toast({ title: `${toastTitle.replace('...','')} (Simulation Successful)` });
     }, 500);
-  }, [configuredDashboardChannels, toast]);
+  }, [configuredSocialAccounts, toast]);
+
+
+  const handleDisconnectChannel = (channelId: string) => {
+    setTimeout(() => {
+        setConfiguredSocialAccounts(prev =>
+            prev.map(ch => ch.id === channelId ? { ...ch, status: 'Disconnected', accountIdentifier: undefined } : ch)
+        );
+        if (expandedChannelId === channelId) {
+             setExpandedChannelId(null);
+        }
+        toast({ title: `Channel disconnected (Simulation).` });
+    }, 300);
+  };
 
 
   const handleToggleManageSection = (channelId: string) => {
-    setExpandedChannelId(prevId => (prevId === channelId ? null : channelId));
+    if (expandedChannelId === channelId) {
+      setExpandedChannelId(null);
+      setManageModalChannel(null);
+    } else {
+      const channelToManage = configuredSocialAccounts.find(c => c.id === channelId);
+      if (channelToManage) {
+        setExpandedChannelId(channelId);
+        setManageModalChannel(channelToManage); // Still set this for the modal content
+      }
+    }
   };
 
   const handleSaveSocialMediaDashboardPreferences = () => {
-    const channelsToSave = configuredDashboardChannels.map(({ icon, oauthPermissionsExample, ...rest }) => rest);
-    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(channelsToSave));
+    // This function now saves the IDs of all accounts currently in configuredSocialAccounts,
+    // regardless of their connection status. The dashboard will filter by 'Connected' status.
+    const idsToSave = configuredSocialAccounts.map(account => account.id);
+    localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(idsToSave));
     toast({
-      title: "Dashboard Preferences Saved",
-      description: "Your selections for which channels appear on the Dashboard Overview have been saved locally.",
+      title: "Social Media Preferences Saved",
+      description: "Your list of configured social media channels has been saved. The dashboard will show connected ones.",
       variant: "default",
     });
   };
 
   const handleSaveAiConfiguration = async () => {
-    if (systemPassword !== "password123") {
+    // ... (existing AiConfigurationInput type remains the same)
+    const configData : AiConfigurationInput = {
+      provider: selectedProvider as "gemini" | "openrouter" | "openai" | "anthropic", // Cast as some providers might be disabled in genkit.ts
+      geminiApiKey: selectedProvider === 'gemini' ? geminiApiKey : undefined,
+      // geminiModelName property does not exist on AiConfigurationInput
+      openRouterApiKey: selectedProvider === 'openrouter' ? openRouterApiKey : undefined,
+      openRouterModel: selectedProvider === 'openrouter' ? openRouterModelName : undefined,
+      // openAiApiKey, openAiModelName, anthropicApiKey, anthropicModelName properties do not exist on AiConfigurationInput
+    };
+    
+    // Add missing properties to configData for validation against AiConfigurationInput
+    if (selectedProvider === 'gemini') {
+        (configData as any).geminiModelName = geminiModelName;
+    } else if (selectedProvider === 'openai') {
+        (configData as any).openAiApiKey = openAiApiKey;
+        (configData as any).openAiModelName = openAiModelName;
+    } else if (selectedProvider === 'anthropic') {
+        (configData as any).anthropicApiKey = anthropicApiKey;
+        (configData as any).anthropicModelName = anthropicModelName;
+    }
+
+
+    if (systemPassword !== "password123") { // Mock password check
       toast({ title: "Authentication Failed", description: "Incorrect system admin password.", variant: "destructive" });
       return;
     }
-
-    const configData : AiConfigurationInput = {
-      provider: selectedProvider as "gemini" | "openrouter" | "openai" | "anthropic",
-      geminiApiKey: selectedProvider === 'gemini' ? geminiApiKey : undefined,
-      geminiModelName: selectedProvider === 'gemini' ? geminiModelName : undefined,
-      openRouterApiKey: selectedProvider === 'openrouter' ? openRouterApiKey : undefined,
-      openRouterModel: selectedProvider === 'openrouter' ? openRouterModelName : undefined,
-      openAiApiKey: selectedProvider === 'openai' ? openAiApiKey : undefined,
-      openAiModelName: selectedProvider === 'openai' ? openAiModelName : undefined,
-      anthropicApiKey: selectedProvider === 'anthropic' ? anthropicApiKey : undefined,
-      anthropicModelName: selectedProvider === 'anthropic' ? anthropicModelName : undefined,
-    };
 
     const result = await handleUpdateAiConfigurationAction(configData);
     if (result.success) {
@@ -485,9 +515,9 @@ export default function SystemConfigurationPage() {
   };
 
   const getStatusBadgeVariant = (status: ConfiguredSocialChannel['status']): "default" | "secondary" | "destructive" | "outline" => {
-    if (status === 'Connected') return 'default';
-    if (status === 'Needs Re-auth') return 'destructive';
-    return 'secondary';
+    if (status === 'Connected') return 'default'; // Blue
+    if (status === 'Needs Re-auth') return 'destructive'; // Red
+    return 'secondary'; // Gray
   };
 
   const handleStorageConfigInputChange = (fieldId: string, value: string) => {
@@ -522,16 +552,16 @@ export default function SystemConfigurationPage() {
     if (smtpService && (
         (selectedEmailService === "generic_smtp" && smtpHost && smtpPort && smtpUser) ||
         (selectedEmailService === "ses" && sesAccessKey && sesSecretKey && sesRegion && sesVerifiedIdentity) ||
-        (["gmail", "outlook"].includes(selectedEmailService)) || // Assume OAuth is "configured" if selected
+        (["gmail", "outlook"].includes(selectedEmailService)) || 
         (!["generic_smtp", "gmail", "outlook", "ses"].includes(selectedEmailService) && apiKey)
     )) {
          icons.push(<Tooltip key={`smtp-${smtpService.id}-active`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7">{React.cloneElement(smtpService.icon as React.ReactElement, { className: "h-5 w-5" })}</Button></TooltipTrigger><TooltipContent><p>Email Sending: {smtpService.name}</p></TooltipContent></Tooltip>);
     }
     // Social Media
-    configuredDashboardChannels.filter(c => c.status === 'Connected').slice(0, 3).forEach(channel => {
+    configuredSocialAccounts.filter(c => c.status === 'Connected').slice(0, 3).forEach(channel => {
       icons.push(<Tooltip key={`social-${channel.id}-active`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7">{React.cloneElement(channel.icon as React.ReactElement, { className: "h-5 w-5" })}</Button></TooltipTrigger><TooltipContent><p>Social: {channel.name}</p></TooltipContent></Tooltip>);
     });
-    if (configuredDashboardChannels.filter(c => c.status === 'Connected').length > 3) {
+    if (configuredSocialAccounts.filter(c => c.status === 'Connected').length > 3) {
         icons.push(<Tooltip key="social-more-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"><PlusCircleIcon className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>+ More Social</p></TooltipContent></Tooltip>);
     }
     // Storage
@@ -547,7 +577,7 @@ export default function SystemConfigurationPage() {
   }, [
     selectedProvider, geminiApiKey, geminiModelName, openRouterApiKey, openRouterModelName, openAiApiKey, openAiModelName, anthropicApiKey, anthropicModelName,
     selectedEmailService, smtpHost, smtpPort, smtpUser, sesAccessKey, sesSecretKey, sesRegion, sesVerifiedIdentity, apiKey,
-    configuredDashboardChannels,
+    configuredSocialAccounts, // Use configuredSocialAccounts for social icons
     selectedStorageProviderId, storageConfigInputs
   ]);
 
@@ -582,7 +612,7 @@ export default function SystemConfigurationPage() {
           </TooltipProvider>
 
           <Tabs defaultValue="ai-settings" className="w-full">
-             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-1 mb-6 h-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-1 mb-6 h-auto">
               <TabsTrigger value="ai-settings" className="py-2 text-xs sm:text-sm"><Cpu className="mr-1 h-4 w-4 hidden sm:inline-block"/>AI Settings</TabsTrigger>
               <TabsTrigger value="smtp-settings" className="py-2 text-xs sm:text-sm"><Mailbox className="mr-1 h-4 w-4 hidden sm:inline-block"/>SMTP Settings</TabsTrigger>
               <TabsTrigger value="email-config" className="py-2 text-xs sm:text-sm"><Mail className="mr-1 h-4 w-4 hidden sm:inline-block"/>Email Config</TabsTrigger>
@@ -657,8 +687,8 @@ export default function SystemConfigurationPage() {
                         onChange={(e) => setOpenRouterModelName(e.target.value)}
                       />
                        <p className="text-xs text-muted-foreground">
-                        Specify the model identifier string from OpenRouter (e.g., `mistralai/mistral-7b-instruct`).
-                        Refer to <Link href="https://openrouter.ai/docs#models" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">OpenRouter documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link> for available models.
+                        Specify the model identifier string from OpenRouter.
+                        Refer to <Link href="https://openrouter.ai/docs#models" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">OpenRouter documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link> for available models and pricing.
                       </p>
                     </div>
                   </div>
@@ -739,9 +769,9 @@ export default function SystemConfigurationPage() {
                         </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-3">
-                            <Label htmlFor="systemPassword">System Admin Password</Label>
+                            <Label htmlFor="systemPasswordAi">System Admin Password</Label>
                             <Input
-                                id="systemPassword"
+                                id="systemPasswordAi"
                                 type="password"
                                 value={systemPassword}
                                 onChange={(e) => setSystemPassword(e.target.value)}
@@ -808,8 +838,8 @@ export default function SystemConfigurationPage() {
                 {(selectedEmailService === "gmail" || selectedEmailService === "outlook") && (
                   <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
                     <h4 className="font-medium flex items-center">
-                        {emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon}
-                        <span className="ml-2">Connect via OAuth 2.0 (Recommended)</span>
+                        {React.cloneElement(emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon as React.ReactElement, {className: "h-5 w-5 mr-2"})}
+                        Connect via OAuth 2.0 (Recommended)
                     </h4>
                     <p className="text-sm text-muted-foreground"> For {emailServiceProviders.find(p=>p.id === selectedEmailService)?.name}, connecting via OAuth is more secure. </p>
                     <Button variant="outline" onClick={() => toast({ title: "OAuth Connection (Simulation)", description: `Redirecting to ${selectedEmailService === "gmail" ? "Google" : "Microsoft"} for authorization...` })}> <Link2IconLucide className="mr-2 h-4 w-4"/> Connect with {selectedEmailService === "gmail" ? "Google" : "Microsoft"} </Button>
@@ -820,8 +850,8 @@ export default function SystemConfigurationPage() {
                 {selectedEmailService === "ses" && (
                    <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
                     <h4 className="font-medium flex items-center">
-                        {emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon}
-                        <span className="ml-2">Amazon SES Configuration</span>
+                        {React.cloneElement(emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon as React.ReactElement, {className: "h-5 w-5 mr-2"})}
+                        Amazon SES Configuration
                     </h4>
                     <div className="space-y-1.5"> <Label htmlFor="sesAccessKey">Access Key ID</Label> <Input id="sesAccessKey" placeholder="Your AWS Access Key ID" value={sesAccessKey} onChange={e => setSesAccessKey(e.target.value)} /> </div>
                     <div className="space-y-1.5"> <Label htmlFor="sesSecretKey">Secret Access Key</Label> <Input id="sesSecretKey" type="password" placeholder="Your AWS Secret Access Key" value={sesSecretKey} onChange={e => setSesSecretKey(e.target.value)}/> </div>
@@ -834,8 +864,8 @@ export default function SystemConfigurationPage() {
                 {["mailgun", "sendgrid", "postmark", "brevo", "mailjet", "zoho_mail"].includes(selectedEmailService) && (
                   <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
                     <h4 className="font-medium flex items-center">
-                        {emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon}
-                        <span className="ml-2">Configure with API Key: {emailServiceProviders.find(p=>p.id === selectedEmailService)?.name}</span>
+                        {React.cloneElement(emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon as React.ReactElement, {className: "h-5 w-5 mr-2"})}
+                        Configure with API Key: {emailServiceProviders.find(p=>p.id === selectedEmailService)?.name}
                     </h4>
                     <div className="space-y-1.5"> <Label htmlFor="apiKey">API Key</Label> <Input id="apiKey" type="password" placeholder={`Enter ${emailServiceProviders.find(p=>p.id === selectedEmailService)?.name} API Key`} value={apiKey} onChange={e => setApiKey(e.target.value)} /> </div>
                     <div className="space-y-1.5"> <Label htmlFor="apiSecret">API Secret / Password (Optional)</Label> <Input id="apiSecret" type="password" placeholder="Enter API Secret if required" value={apiSecret} onChange={e => setApiSecret(e.target.value)} /> </div>
@@ -867,7 +897,7 @@ export default function SystemConfigurationPage() {
                 <p className="text-sm text-muted-foreground mb-1"> Add social platforms your brand uses. Connected platforms here will be available for selection on the main Dashboard Overview for quick stats display. </p>
 
                 <div className="space-y-2">
-                    <Label htmlFor="platformCombobox">Add Platform to Configuration</Label>
+                    <Label htmlFor="platformCombobox">Add Platform to Configuration List</Label>
                     <Popover open={openPlatformCombobox} onOpenChange={setOpenPlatformCombobox}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" role="combobox" id="platformCombobox" aria-expanded={openPlatformCombobox} className="w-full md:w-[300px] justify-between">
@@ -881,7 +911,7 @@ export default function SystemConfigurationPage() {
                           <CommandList>
                             <CommandEmpty>No platform found.</CommandEmpty>
                             <CommandGroup>
-                              {availableSocialPlatforms.filter(p => !configuredDashboardChannels.find(cp => cp.id === p.id) && p.name.toLowerCase().includes(platformSearchValue.toLowerCase()))
+                              {availableSocialPlatforms.filter(p => !configuredSocialAccounts.find(cp => cp.id === p.id) && p.name.toLowerCase().includes(platformSearchValue.toLowerCase()))
                                 .map((platform) => (
                                 <CommandItem key={platform.id} value={platform.name} onSelect={() => handleAddPlatformToConfiguredList(platform)} className="flex items-center gap-2 cursor-pointer">
                                   {platform.icon} {platform.name}
@@ -894,28 +924,28 @@ export default function SystemConfigurationPage() {
                     </Popover>
                   </div>
 
-                {configuredDashboardChannels.length > 0 ? (
+                {configuredSocialAccounts.length > 0 ? (
                   <ScrollArea className="h-auto max-h-[60vh] mt-4 border rounded-md">
                     <div className="p-3 space-y-3">
-                      <h4 className="font-medium text-sm text-muted-foreground">Configured Channels:</h4>
-                      {configuredDashboardChannels.map((channel) => (
+                      <h4 className="font-medium text-sm text-muted-foreground">Configured Channels ({configuredSocialAccounts.length}):</h4>
+                      {configuredSocialAccounts.map((channel) => (
                         <div key={channel.id} className="flex flex-col p-3 border rounded-md hover:bg-muted/50 gap-2">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
                                 <div className="flex items-center gap-2 flex-grow">
                                     {channel.icon}
                                     <div className="flex-1">
                                         <span className="font-medium text-sm">{channel.name}</span>
-                                        <p className="text-xs text-muted-foreground break-words"> {channel.status === 'Connected' ? channel.accountIdentifier || 'Account Connected' : channel.status === 'Needs Re-auth' ? 'Needs Re-authentication' : 'Not Connected'} </p>
+                                        <p className="text-xs text-muted-foreground break-words"> {channel.status === 'Connected' ? (channel.accountIdentifier || 'Account Connected') : (channel.status === 'Needs Re-auth' ? 'Needs Re-authentication' : 'Not Connected')} </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                                <div className="flex items-center gap-1 flex-shrink-0 self-end sm:self-center">
                                     <Badge variant={getStatusBadgeVariant(channel.status)} className="text-xs mr-1">{channel.status}</Badge>
                                     {channel.status === 'Disconnected' && (
                                         <Button variant="default" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Connect</Button>
                                     )}
                                     {channel.status === 'Connected' && (<>
                                         <Button variant="ghost" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Manage</Button>
-                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => performConnectionAction(channel.id, 'Disconnect')}>Disconnect</Button>
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => handleDisconnectChannel(channel.id)}>Disconnect</Button>
                                     </>)}
                                     {channel.status === 'Needs Re-auth' && (
                                         <Button variant="default" size="sm" onClick={() => handleToggleManageSection(channel.id)} className="bg-muted hover:bg-card border border-accent text-primary-foreground">Re-authenticate</Button>
@@ -936,7 +966,7 @@ export default function SystemConfigurationPage() {
                                       <div> <Label htmlFor={`appId-${channel.id}`} className="text-xs">App ID / Client ID (if applicable)</Label> <Input id={`appId-${channel.id}`} placeholder="Enter App ID (optional)" className="h-8 text-xs mt-0.5"/> </div>
                                       <p className="text-xs text-muted-foreground">Note: Most connections are via OAuth. Enter details above only if specifically required by the platform's alternative connection method.</p>
                                     </div>
-                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Connect')}> <Link2IconLucide className="mr-2 h-4 w-4" /> Proceed to Connect with {channel.name} </Button>
+                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Disconnected')}> <Link2IconLucide className="mr-2 h-4 w-4" /> Proceed to Connect with {channel.name} </Button>
                                   </>
                                 )}
                                  { (channel.status === 'Needs Re-auth') && (
@@ -947,10 +977,10 @@ export default function SystemConfigurationPage() {
                                     <div className="space-y-3 my-3">
                                       <div> <Label htmlFor={`reauth-apiKey-${channel.id}`} className="text-xs">API Key (if applicable)</Label> <Input id={`reauth-apiKey-${channel.id}`} placeholder="Confirm API Key (optional)" className="h-8 text-xs mt-0.5"/> </div>
                                     </div>
-                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Re-authenticate')}> <RefreshCw className="mr-2 h-4 w-4" /> Proceed to Re-authenticate {channel.name} </Button>
+                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Needs Re-auth')}> <RefreshCw className="mr-2 h-4 w-4" /> Proceed to Re-authenticate {channel.name} </Button>
                                   </>
                                 )}
-                                {channel.status === 'Connected' && (
+                                {channel.status === 'Connected' && manageModalChannel?.id === channel.id && ( // Check if this is the channel being managed
                                   <>
                                     <h4 className="text-sm font-semibold mb-2 text-foreground">Connection Details for {channel.name}</h4>
                                     <div className="space-y-3 text-xs">
@@ -959,7 +989,7 @@ export default function SystemConfigurationPage() {
                                         <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Connected Since</Label> <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words">January 1, 2024 (Mock)</p> </div>
                                         <div className="space-y-1"> <Label htmlFor={`customApiEndpoint-${channel.id}`} className="text-xs text-muted-foreground">Custom API Endpoint (Optional)</Label> <Input id={`customApiEndpoint-${channel.id}`} placeholder="e.g., https://graph.facebook.com/v18.0" className="text-xs h-8" disabled/> <p className="text-xs text-muted-foreground">For advanced users with specific API needs (not functional).</p> </div>
                                         <div className="flex justify-end gap-2 pt-2">
-                                            <Button type="button" variant="outline" size="sm" onClick={() => { setConfiguredDashboardChannels(prev => prev.map(c => c.id === channel.id ? {...c, status: 'Needs Re-auth'} : c)); setExpandedChannelId(null); setTimeout(() => setExpandedChannelId(channel.id), 50); setTimeout(() => toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`}), 100); }}> <RefreshCw className="mr-2 h-4 w-4"/> Refresh </Button>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => { setConfiguredSocialAccounts(prev => prev.map(c => c.id === channel.id ? {...c, status: 'Needs Re-auth'} : c)); setExpandedChannelId(null); setTimeout(() => setExpandedChannelId(channel.id), 50); setTimeout(() => toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`}), 100); }}> <RefreshCw className="mr-2 h-4 w-4"/> Refresh </Button>
                                             <Button type="button" variant="outline" size="sm" onClick={() => toast({ title: "View Platform Settings (Simulated)", description: `Opening ${channel.name} settings (not implemented).`})}> <ExternalLink className="mr-2 h-4 w-4"/> View on {channel.name} </Button>
                                         </div>
                                     </div>
@@ -1068,3 +1098,5 @@ export default function SystemConfigurationPage() {
     </MainLayout>
   );
 }
+
+    
