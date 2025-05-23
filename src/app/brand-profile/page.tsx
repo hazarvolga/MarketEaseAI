@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, ImageIcon as ImageIconLucide, Palette, Speaker, Link as LinkIcon, Briefcase, Settings2, ShieldCheck, Paperclip, Building2, Check, ChevronsUpDown, Sparkles as SparklesIcon } from 'lucide-react'; // Ensure SparklesIcon is imported
+import { FileText, ImageIcon as ImageIconLucide, Palette, Speaker, Link as LinkIcon, Briefcase, Settings2, ShieldCheck, Paperclip, Building2, Check, ChevronsUpDown, Sparkles as SparklesIcon } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -61,11 +61,10 @@ export default function BrandProfilePage() {
   const [openBusinessCategory, setOpenBusinessCategory] = React.useState(false);
   const [businessCategoryValue, setBusinessCategoryValue] = React.useState("technology");
   
-  // State for AI Strategic Briefing Tab (mock values)
   const [aiBriefCorePurpose, setAiBriefCorePurpose] = React.useState("To empower design and engineering professionals with intuitive, powerful, and integrated software tools that enhance creativity, precision, and project efficiency.");
   const [aiBriefCustomerValue, setAiBriefCustomerValue] = React.useState("Our platform offers cutting-edge solutions for architects and civil engineers, streamlining complex design, analysis, and collaboration processes from concept to construction.");
   const [aiBriefFocusedProduct, setAiBriefFocusedProduct] = React.useState("ArchModeler Pro Suite");
-  const [aiBriefPriorityPlatforms, setAiBriefPriorityPlatforms] = React.useState<Record<string, boolean>>({ // Explicit type
+  const [aiBriefPriorityPlatforms, setAiBriefPriorityPlatforms] = React.useState<Record<string, boolean>>({
     instagram: false, facebook: true, linkedin: true, twitter: false,
     pinterest: false, youtube: true, tiktok: false, companyBlog: true,
   });
@@ -81,7 +80,6 @@ export default function BrandProfilePage() {
   const { toast } = useToast();
 
   const handleSaveChanges = () => {
-    // In a real app, you'd collect all form data here and send it to a backend
     console.log("Simulating save for brand profile data:", {
       businessCategoryValue,
       aiBriefCorePurpose,
@@ -107,17 +105,16 @@ export default function BrandProfilePage() {
         </Card>
 
         <Tabs defaultValue="basic-info" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-1 mb-6 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-1 mb-6 h-auto">
             <TabsTrigger value="basic-info" className="py-2 text-xs sm:text-sm">1. Basic Info</TabsTrigger>
             <TabsTrigger value="ai-strategic-briefing" className="py-2 text-xs sm:text-sm">2. AI Briefing</TabsTrigger>
-            <TabsTrigger value="brand-brief" className="py-2 text-xs sm:text-sm">3. Brand Brief</TabsTrigger>
-            <TabsTrigger value="visual-identity" className="py-2 text-xs sm:text-sm">4. Visuals</TabsTrigger>
-            <TabsTrigger value="tone-language" className="py-2 text-xs sm:text-sm">5. Tone/Lang</TabsTrigger>
-            <TabsTrigger value="digital-presence" className="py-2 text-xs sm:text-sm">6. Digital</TabsTrigger>
-            <TabsTrigger value="product-service" className="py-2 text-xs sm:text-sm">7. Products</TabsTrigger>
-            <TabsTrigger value="ai-prefs" className="py-2 text-xs sm:text-sm">8. AI Prefs</TabsTrigger>
-            <TabsTrigger value="legal" className="py-2 text-xs sm:text-sm">9. Legal</TabsTrigger>
-            <TabsTrigger value="attachments" className="py-2 text-xs sm:text-sm">10. Files</TabsTrigger>
+            <TabsTrigger value="visual-identity" className="py-2 text-xs sm:text-sm">3. Visuals</TabsTrigger>
+            <TabsTrigger value="tone-language" className="py-2 text-xs sm:text-sm">4. Tone/Lang</TabsTrigger>
+            <TabsTrigger value="digital-presence" className="py-2 text-xs sm:text-sm">5. Digital</TabsTrigger>
+            <TabsTrigger value="product-service" className="py-2 text-xs sm:text-sm">6. Products</TabsTrigger>
+            <TabsTrigger value="ai-prefs" className="py-2 text-xs sm:text-sm">7. AI Prefs</TabsTrigger>
+            <TabsTrigger value="legal" className="py-2 text-xs sm:text-sm">8. Legal</TabsTrigger>
+            <TabsTrigger value="attachments" className="py-2 text-xs sm:text-sm">9. Files</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic-info">
@@ -170,9 +167,12 @@ export default function BrandProfilePage() {
                               {industryOptions.map((option) => (
                                 <CommandItem
                                   key={option.value}
-                                  value={option.value}
+                                  value={option.label} // Changed to option.label for search
                                   onSelect={(currentValue) => {
-                                    setBusinessCategoryValue(currentValue === businessCategoryValue ? "" : currentValue);
+                                     const selectedOption = industryOptions.find(opt => opt.label.toLowerCase() === currentValue.toLowerCase());
+                                    if (selectedOption) {
+                                      setBusinessCategoryValue(selectedOption.value);
+                                    }
                                     setOpenBusinessCategory(false);
                                   }}
                                 >
@@ -317,29 +317,12 @@ export default function BrandProfilePage() {
             </Card>
           </TabsContent>
           
-          <TabsContent value="brand-brief">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center text-xl">
-                  <FileText className="h-6 w-6 mr-3 text-primary" />
-                  3. Brand Brief
-                </CardTitle>
-                <CardDescription>
-                  This section will contain key strategic briefing points for the brand. Content to be added.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Placeholder content for Brand Brief.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="visual-identity">
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                   <Palette className="h-6 w-6 mr-3 text-primary" />
-                  4. Visual Identity
+                  3. Visual Identity
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -433,7 +416,7 @@ export default function BrandProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <Speaker className="h-6 w-6 mr-3 text-primary" />
-                    5. Tone of Voice & Language
+                    4. Tone of Voice & Language
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -462,7 +445,7 @@ export default function BrandProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <LinkIcon className="h-6 w-6 mr-3 text-primary" />
-                    6. Social & Digital Presence
+                    5. Social & Digital Presence
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -514,7 +497,7 @@ export default function BrandProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <Briefcase className="h-6 w-6 mr-3 text-primary" />
-                    7. Product / Service Details
+                    6. Product / Service Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -547,7 +530,7 @@ export default function BrandProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <Settings2 className="h-6 w-6 mr-3 text-primary" />
-                    8. AI-Specific Preferences (Output Control)
+                    7. AI-Specific Preferences (Output Control)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -580,7 +563,7 @@ export default function BrandProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <ShieldCheck className="h-6 w-6 mr-3 text-primary" />
-                    9. Legal & Compliance
+                    8. Legal & Compliance
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -609,7 +592,7 @@ export default function BrandProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <Paperclip className="h-6 w-6 mr-3 text-primary" />
-                    10. File Attachments & Resources
+                    9. File Attachments & Resources
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -637,7 +620,7 @@ export default function BrandProfilePage() {
         <CardFooter className="mt-8 flex justify-start">
           <Button 
             size="lg" 
-            className="w-full md:w-auto" // Ensure button is full width on small screens
+            className="w-full md:w-auto"
             onClick={handleSaveChanges}
           >
             Save Brand Profile Changes
@@ -647,6 +630,3 @@ export default function BrandProfilePage() {
     </MainLayout>
   );
 }
-
-
-    
