@@ -13,7 +13,8 @@ import {
   ListChecks, 
   Spline, 
   Send,
-  Cog // Added Cog for system settings link
+  Cog, // Added Cog for system settings link
+  LineChart as LineChartIconLucide, // Aliased to avoid conflict if LineChart from recharts is used directly
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import React, { useState, useEffect } from 'react';
@@ -109,23 +110,6 @@ export default function SocialMediaDashboardPage() {
 
         <Separator />
 
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">Manage Social Accounts</CardTitle>
-            <CardDescription>Connect and manage your brand's social media profiles in System Configuration.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline">
-              <Link href="/admin/settings">
-                <Cog className="mr-2 h-4 w-4" /> Go to System Configuration
-              </Link>
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2">
-              Navigate to the "Social Accounts" tab in System Configuration to manage your connections.
-            </p>
-          </CardContent>
-        </Card>
-
         <div className="flex justify-start space-x-2 py-2">
           {(['daily', 'weekly', 'monthly'] as Timeframe[]).map((tf) => (
             <Button key={tf} variant={selectedTimeframe === tf ? 'default' : 'outline'} onClick={() => setSelectedTimeframe(tf)} className="capitalize text-xs h-8 px-3">
@@ -198,7 +182,7 @@ export default function SocialMediaDashboardPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
               <CardHeader>
-                  <CardTitle className="flex items-center"><BarChart3 className="mr-2 h-5 w-5 text-primary"/>Performance Trends</CardTitle>
+                  <CardTitle className="flex items-center"><LineChartIconLucide className="mr-2 h-5 w-5 text-primary"/>Performance Trends</CardTitle>
                   <CardDescription>Key performance indicators over the last 6 months (Placeholder Data).</CardDescription>
               </CardHeader>
               <CardContent className="h-[300px] pt-4">
@@ -218,7 +202,7 @@ export default function SocialMediaDashboardPage() {
                         itemStyle={{color: "hsl(var(--foreground))"}}
                         content={<ChartTooltipContent />}
                       />
-                      <ChartLegend icon={LineChart} content={<ChartLegendContent />} />
+                      <ChartLegend icon={LineChartIconLucide} content={<ChartLegendContent />} />
                       <Line type="monotone" dataKey="engagement" stroke="var(--color-engagement)" strokeWidth={2} dot={{r:4, fill: "var(--color-engagement)", strokeWidth:1}} activeDot={{r:6, strokeWidth:2}}/>
                       <Line type="monotone" dataKey="followers" stroke="var(--color-followers)" strokeWidth={2} dot={{r:4, fill: "var(--color-followers)", strokeWidth:1}} activeDot={{r:6, strokeWidth:2}}/>
                     </LineChart>
@@ -306,6 +290,23 @@ export default function SocialMediaDashboardPage() {
             </Card>
         </div>
         
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center"><Cog className="mr-2 h-5 w-5 text-muted-foreground" />Manage Social Accounts</CardTitle>
+            <CardDescription>Connect and manage your brand's social media profiles in System Configuration.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/admin/settings">
+                <Cog className="mr-2 h-4 w-4" /> Go to System Configuration
+              </Link>
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Navigate to the "Social Accounts" tab in System Configuration to manage your connections.
+            </p>
+          </CardContent>
+        </Card>
+
       </div>
     </MainLayout>
   );
