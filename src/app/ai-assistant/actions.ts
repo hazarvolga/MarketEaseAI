@@ -8,10 +8,15 @@ import {
 } from '@/ai/flows/generate-marketing-content';
 import { z } from 'zod';
 
-// Re-define schema here for server-side validation, matching the one in the flow.
+// This schema now only requires contentRequest from the AI Assistant page form.
+// Other strategic fields are optional here, as they should ideally come from the Brand Profile.
+// The AI flow itself has its own schema which might make some of these mandatory
+// (like brandCorePurpose), so we pass placeholders if they are not available from a saved profile.
 const ActionInputSchema = z.object({
-  brandCorePurpose: z.string().min(10, "Brand's core purpose must be at least 10 characters."),
-  customerValueProposition: z.string().min(10, "Customer value proposition must be at least 10 characters."),
+  contentRequest: z.string().min(10, "Content request must be at least 10 characters (e.g., '5 Instagram post ideas').").max(1000),
+  // Make other fields optional as they'd ideally come from a saved Brand Profile
+  brandCorePurpose: z.string().min(10).optional(),
+  customerValueProposition: z.string().min(10).optional(),
   focusedProductService: z.string().optional(),
   priorityPlatforms: z.object({
     instagram: z.boolean().optional(),
@@ -31,32 +36,36 @@ const ActionInputSchema = z.object({
   brandKeywords: z.string().optional(),
   thingsToAvoid: z.string().optional(),
   uniqueSellingPropositions: z.string().optional(),
-  contentRequest: z.string().min(10, "Content request must be at least 10 characters (e.g., '5 Instagram post ideas')."),
 });
 
 export async function handleGenerateContentAction(
-  input: GenerateMarketingContentInput
+  input: GenerateMarketingContentInput // The input will match this type from the calling page
 ): Promise<{ success: boolean; data?: GenerateMarketingContentOutput; error?: string | z.ZodError<GenerateMarketingContentInput> }> {
   
-  const validationResult = ActionInputSchema.safeParse(input);
+  // Validate only the contentRequest for now, as other fields are from Brand Profile (conceptually)
+  const validationResult = z.object({ contentRequest: ActionInputSchema.shape.contentRequest }).safeParse({ contentRequest: input.contentRequest });
 
   if (!validationResult.success) {
-    return { success: false, error: validationResult.error };
+    return { success: false, error: validationResult.error as z.ZodError<GenerateMarketingContentInput> };
   }
 
   try {
-    // Ensure optional fields that are empty strings are sent as undefined
+    // The payload passed to the AI flow includes all fields from GenerateMarketingContentInput.
+    // If they are not provided by the simplified AI assistant form (which only provides contentRequest),
+    // they will be undefined. The AI flow should handle undefined optional fields.
+    // For mandatory fields in the AI flow not covered by 'contentRequest',
+    // the calling component (AiAssistantPage) provides generic placeholders.
     const payload: GenerateMarketingContentInput = {
-      ...validationResult.data,
-      focusedProductService: validationResult.data.focusedProductService || undefined,
-      campaignPeriods: validationResult.data.campaignPeriods || undefined,
-      frequentlyAskedQuestions: validationResult.data.frequentlyAskedQuestions || undefined,
-      desiredUserEmotion: validationResult.data.desiredUserEmotion || undefined,
-      competitorInspirations: validationResult.data.competitorInspirations || undefined,
-      additionalStrategicInfo: validationResult.data.additionalStrategicInfo || undefined,
-      brandKeywords: validationResult.data.brandKeywords || undefined,
-      thingsToAvoid: validationResult.data.thingsToAvoid || undefined,
-      uniqueSellingPropositions: validationResult.data.uniqueSellingPropositions || undefined,
+      ...input, // This will include contentRequest and any placeholders for mandatory fields
+      focusedProductService: input.focusedProductService || undefined,
+      campaignPeriods: input.campaignPeriods || undefined,
+      frequentlyAskedQuestions: input.frequentlyAskedQuestions || undefined,
+      desiredUserEmotion: input.desiredUserEmotion || undefined,
+      competitorInspirations: input.competitorInspirations || undefined,
+      additionalStrategicInfo: input.additionalStrategicInfo || undefined,
+      brandKeywords: input.brandKeywords || undefined,
+      thingsToAvoid: input.thingsToAvoid || undefined,
+      uniqueSellingPropositions: input.uniqueSellingPropositions || undefined,
     };
     const output = await generateMarketingContent(payload);
     return { success: true, data: output };
