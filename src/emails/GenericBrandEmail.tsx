@@ -1,3 +1,8 @@
+
+// This file's content is temporarily commented out/removed to resolve 'react-email' module not found issues.
+// It will be restored or replaced with a custom email component solution later.
+
+/*
 import {
   Body,
   Button,
@@ -17,44 +22,11 @@ import {
 } from '@react-email/components';
 import * as React from 'react';
 
-interface MockBrandData {
-  companyName: string;
-  logoPlaceholderText: string; // e.g., "ArchStruct"
-  logoUrl?: string; // Optional: URL to a real logo image
-  address: string;
-  websiteUrl: string;
-  primaryColor: string; // e.g., "#007BFF"
-  textColor: string; // e.g., "#333333"
-  accentColor: string; // e.g., "#FF8C00"
-  footerLinkColor: string; // e.g., "#0056b3"
-  socialLinks: {
-    facebook?: string;
-    instagram?: string;
-    twitter?: string;
-    linkedin?: string;
-  };
-}
-
-interface EmailTextContent {
-  subject: string;
-  preheader?: string;
-  greeting?: string;
-  body: string; // Should contain \n\n for paragraphs and \n- for list items
-  ctaText?: string;
-  offer?: string;
-}
-
-interface GenericBrandEmailProps {
-  brandData: MockBrandData;
-  emailContent: EmailTextContent;
-  templateCategory?: string;
-}
-
 // Helper to determine if text on a colored background should be light or dark
 const getContrastYIQ = (hexcolor: string): 'black' | 'white' => {
-  if (!hexcolor || hexcolor.length < 6) return 'black';
+  if (!hexcolor || hexcolor.length < 6) return 'black'; // Default to black for invalid/short hex
   const color = hexcolor.charAt(0) === '#' ? hexcolor.substring(1, 7) : hexcolor.substring(0, 6);
-  if (color.length < 6) return 'black';
+  if (color.length < 6) return 'black'; // Default if hex is too short after stripping #
 
   try {
     const r = parseInt(color.substring(0, 2), 16);
@@ -63,9 +35,44 @@ const getContrastYIQ = (hexcolor: string): 'black' | 'white' => {
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
     return yiq >= 128 ? 'black' : 'white';
   } catch (e) {
-    return 'black';
+    console.error("Error parsing color for contrast:", hexcolor, e);
+    return 'black'; // Default to black on error
   }
 };
+
+
+interface BrandData {
+  companyName: string;
+  logoPlaceholderText: string; 
+  logoUrl?: string; 
+  address: string;
+  websiteUrl: string;
+  primaryColor: string; 
+  textColor: string;    
+  accentColor: string;  
+  footerLinkColor: string; 
+  socialLinks: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    linkedin?: string;
+  };
+}
+
+interface EmailContent {
+  subject: string;
+  preheader?: string;
+  greeting?: string;
+  body: string; 
+  ctaText?: string;
+  offer?: string;
+}
+
+interface GenericBrandEmailProps {
+  brandData: BrandData;
+  emailContent: EmailContent;
+  templateCategory?: string;
+}
 
 export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
   brandData,
@@ -73,13 +80,13 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
   templateCategory,
 }) => {
   const year = new Date().getFullYear();
+  
   const primaryTextColor = getContrastYIQ(brandData.primaryColor);
   const accentTextColor = getContrastYIQ(brandData.accentColor);
 
-  // Define base styles
   const main = {
-    backgroundColor: '#f0f2f5', // Light grey background for the email client window
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif",
+    backgroundColor: '#f0f2f5',
+    fontFamily: "'Open Sans', 'Roboto', 'Lato', 'Helvetica Neue', Helvetica, Arial, sans-serif",
   };
 
   const container = {
@@ -90,10 +97,10 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
     backgroundColor: '#ffffff',
     border: '1px solid #e0e0e0',
     borderRadius: '8px',
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   };
 
-  const headerSection = {
+  const headerSectionStyle = {
     backgroundColor: brandData.primaryColor,
     padding: '24px 30px',
     textAlign: 'center' as const,
@@ -106,28 +113,42 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
     textDecoration: 'none',
   };
 
-  const contentSection = {
+  const contentSectionStyle = {
     padding: '20px 30px 30px 30px',
     color: brandData.textColor,
     fontSize: '16px',
     lineHeight: '1.7',
   };
 
-  const subjectHeading = {
+  const subjectHeadingStyle = {
     color: brandData.primaryColor === '#ffffff' && brandData.textColor === '#ffffff' ? '#111827' : (brandData.primaryColor === '#ffffff' ? brandData.textColor : brandData.primaryColor),
     fontSize: '24px',
     fontWeight: 'bold' as const,
     margin: '0 0 10px 0',
+    lineHeight: '1.3',
   };
   
-  const preheaderText = {
+  const preheaderTextStyle = {
     fontSize: '13px',
     color: '#5f5f5f',
     margin: '0 0 20px 0',
     lineHeight: '1.5',
   };
 
-  const buttonStyle = {
+  const textStyle = {
+    color: brandData.textColor,
+    fontSize: '16px',
+    lineHeight: '1.7',
+    margin: '0 0 15px 0',
+  };
+
+  const greetingStyle = {
+    ...textStyle,
+    fontWeight: 'bold' as const,
+    marginBottom: '15px',
+  };
+
+  const ctaButtonStyle = {
     backgroundColor: brandData.accentColor,
     color: accentTextColor,
     padding: '12px 25px',
@@ -138,9 +159,27 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
     textAlign: 'center' as const,
     fontSize: '16px',
     border: 'none',
+    lineHeight: '1.5', // Ensure line height is appropriate for button text
   };
 
-  const footerSection = {
+  const offerSectionStyle = {
+     backgroundColor: `${brandData.primaryColor}20`, // Assuming primaryColor is hex, add alpha
+     padding: '15px 20px', 
+     borderRadius: '5px', 
+     margin: '20px 0', 
+     border: `1px dashed ${brandData.primaryColor}`
+  };
+  
+  const offerTextStyle = {
+    color: brandData.primaryColor, // Text color that contrasts with the lightened primary
+    margin: 0, 
+    fontWeight: 'bold' as const,
+    fontSize: '16px',
+    lineHeight: '1.5',
+  };
+
+
+  const footerSectionStyle = {
     padding: '20px 30px',
     textAlign: 'center' as const,
     fontSize: '12px',
@@ -149,10 +188,16 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
     marginTop: '20px',
   };
 
-  const footerLink = {
+  const footerLinkStyle = {
     color: brandData.footerLinkColor,
     textDecoration: 'underline',
     margin: '0 5px',
+  };
+
+  const socialLinkStyle = {
+    ...footerLinkStyle,
+    margin: '0 8px',
+    display: 'inline-block',
   };
 
   let heroImageSrc: string | null = null;
@@ -165,7 +210,9 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
     if (lowerCategory === 'product launch') heroText = "New Product Launch!";
     if (lowerCategory === 're-engagement') heroText = "We Miss You!";
     
-    heroImageSrc = `https://placehold.co/540x200/${brandData.accentColor.replace('#','')}/${accentTextColor === 'white' ? 'FFFFFF' : '000000'}?text=${encodeURIComponent(heroText)}`;
+    const accentColorHex = brandData.accentColor.replace('#','');
+    const heroTextColor = getContrastYIQ(brandData.accentColor) === 'white' ? 'FFFFFF' : '000000';
+    heroImageSrc = `https://placehold.co/540x200/${accentColorHex}/${heroTextColor}?text=${encodeURIComponent(heroText)}`;
     heroAltText = `${heroText} Banner`;
   }
 
@@ -173,31 +220,14 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
   return (
     <Html lang="en">
       <Head>
-        <Font
-          fontFamily="Roboto"
-          fallbackFontFamily="Arial"
-          webFont={{
-            url: 'https://fonts.gstatic.com/s/roboto/v27/KFOmCnqEu92Fr1Mu4mxK.woff2',
-            format: 'woff2',
-          }}
-          fontWeight={400}
-          fontStyle="normal"
-        />
-        <Font
-          fontFamily="Open Sans"
-          fallbackFontFamily="Helvetica"
-          webFont={{
-            url: 'https://fonts.gstatic.com/s/opensans/v27/mem8YaGs126MiZpBA-UFVZ0bf8pkAg.woff2',
-            format: 'woff2',
-          }}
-          fontWeight={400}
-          fontStyle="normal"
-        />
+        <Font fontFamily="Open Sans" fallbackFontFamily="Arial" webFont={{ url: 'https://fonts.gstatic.com/s/opensans/v17/mem8YaGs126MiZpBA-UFVZ0bf8pkAg.woff2', format: 'woff2' }} fontWeight={400} fontStyle="normal" />
+        <Font fontFamily="Roboto" fallbackFontFamily="Arial" webFont={{ url: 'https://fonts.gstatic.com/s/roboto/v20/KFOmCnqEu92Fr1Mu4mxK.woff2', format: 'woff2' }} fontWeight={400} fontStyle="normal" />
+        <Font fontFamily="Lato" fallbackFontFamily="Arial" webFont={{ url: 'https://fonts.gstatic.com/s/lato/v16/S6uyw4BMUTPHjx4wWw.woff2', format: 'woff2' }} fontWeight={400} fontStyle="normal" />
       </Head>
       {emailContent.preheader && <Preview>{emailContent.preheader}</Preview>}
       <Body style={main}>
         <Container style={container}>
-          <Section style={headerSection}>
+          <Section style={headerSectionStyle}>
             <Link href={brandData.websiteUrl} style={logoStyle}>
               {brandData.logoUrl ? (
                 <Img src={brandData.logoUrl} alt={`${brandData.companyName} Logo`} height="40" style={{ margin: '0 auto' }} />
@@ -207,14 +237,14 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
             </Link>
           </Section>
 
-          <Section style={contentSection}>
-            <Heading as="h1" style={subjectHeading}>{emailContent.subject}</Heading>
+          <Section style={contentSectionStyle}>
+            <Heading as="h1" style={subjectHeadingStyle}>{emailContent.subject}</Heading>
             
             {emailContent.preheader && (
-                <Text style={preheaderText}>{emailContent.preheader}</Text>
+                <Text style={preheaderTextStyle}>{emailContent.preheader}</Text>
             )}
 
-            {emailContent.greeting && <Text style={{ ...contentSection, fontWeight: 'bold', marginBottom: '15px' }}>{emailContent.greeting}</Text>}
+            {emailContent.greeting && <Text style={greetingStyle}>{emailContent.greeting}</Text>}
             
             {heroImageSrc && (
                  <Section style={{ textAlign: 'center' as const, margin: '20px 0' }}>
@@ -223,7 +253,7 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
             )}
             
             {emailContent.body.split('\n\n').map((paragraph, paraIndex) => (
-              <Text key={`para-${paraIndex}`} style={{ margin: '0 0 15px 0' }}>
+              <Text key={`para-${paraIndex}`} style={textStyle}>
                 {paragraph.split('\n- ').map((item, itemIndex) => {
                   if (itemIndex === 0) return item;
                   return (
@@ -236,46 +266,46 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
             ))}
 
             {emailContent.offer && (
-              <Section style={{ backgroundColor: `${brandData.primaryColor}20`, padding: '15px 20px', borderRadius: '5px', margin: '20px 0', border: `1px dashed ${brandData.primaryColor}` }}>
-                <Text style={{ color: brandData.primaryColor, margin: 0, fontWeight: 'bold' as const }}>{emailContent.offer}</Text>
+              <Section style={offerSectionStyle}>
+                <Text style={offerTextStyle}>{emailContent.offer}</Text>
               </Section>
             )}
 
             {emailContent.ctaText && (
               <Section style={{ textAlign: 'center' as const, margin: '30px 0' }}>
-                <Button href={brandData.websiteUrl} style={buttonStyle}>
+                <Button href={brandData.websiteUrl} style={ctaButtonStyle}>
                   {emailContent.ctaText}
                 </Button>
               </Section>
             )}
           </Section>
 
-          <Hr style={{ borderColor: '#eaeaea', margin: '0' }} />
+          <Hr style={{ borderColor: '#eaeaea', margin: '0', borderBottomWidth: '1px' }} />
 
-          <Section style={footerSection}>
+          <Section style={footerSectionStyle}>
              <Text style={{ margin: '0 0 10px 0' }}>
               &copy; {year} {brandData.companyName}. All rights reserved.
             </Text>
             <Text style={{ margin: '0 0 10px 0' }}>{brandData.address}</Text>
             <Text style={{ margin: '0 0 15px 0', lineHeight: '1.5' }}>
-              <Link href={brandData.websiteUrl} style={footerLink}>
+              <Link href={brandData.websiteUrl} style={footerLinkStyle}>
                 Visit our website
               </Link>
               {' | '}
-              <Link href={`${brandData.websiteUrl}/unsubscribe`} style={footerLink}>
+              <Link href={`${brandData.websiteUrl}/unsubscribe`} style={footerLinkStyle}>
                 Unsubscribe
               </Link>
               {' | '}
-              <Link href={`${brandData.websiteUrl}/privacy`} style={footerLink}>
+              <Link href={`${brandData.websiteUrl}/privacy`} style={footerLinkStyle}>
                 Privacy Policy
               </Link>
             </Text>
             {(brandData.socialLinks.facebook || brandData.socialLinks.instagram || brandData.socialLinks.twitter || brandData.socialLinks.linkedin) && (
               <Section style={{ margin: '15px 0 10px' }}>
-                {brandData.socialLinks.facebook && <Link href={brandData.socialLinks.facebook} style={footerLink}>FB</Link>}
-                {brandData.socialLinks.instagram && <Link href={brandData.socialLinks.instagram} style={footerLink}>IG</Link>}
-                {brandData.socialLinks.twitter && <Link href={brandData.socialLinks.twitter} style={footerLink}>X</Link>}
-                {brandData.socialLinks.linkedin && <Link href={brandData.socialLinks.linkedin} style={footerLink}>LI</Link>}
+                {brandData.socialLinks.facebook && <Link href={brandData.socialLinks.facebook} style={socialLinkStyle}>FB</Link>}
+                {brandData.socialLinks.instagram && <Link href={brandData.socialLinks.instagram} style={socialLinkStyle}>IG</Link>}
+                {brandData.socialLinks.twitter && <Link href={brandData.socialLinks.twitter} style={socialLinkStyle}>X</Link>}
+                {brandData.socialLinks.linkedin && <Link href={brandData.socialLinks.linkedin} style={socialLinkStyle}>LI</Link>}
               </Section>
             )}
           </Section>
@@ -285,4 +315,6 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
   );
 };
 
-export default GenericBrandEmail;
+// export default GenericBrandEmail; // Default export might cause issues if not handled correctly by Next.js build for this specific file usage
+*/
+export {} // Add an empty export to make this a module if all content is commented out
