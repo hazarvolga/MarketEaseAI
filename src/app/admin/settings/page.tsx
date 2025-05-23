@@ -29,15 +29,15 @@ import {
   ImageIcon as ImageIconLucide,
   Youtube,
   HardDrive,
-  Database, 
-  Cloud,    
-  BoxIcon as Box,     
+  Database,
+  Cloud,
+  BoxIcon as Box,
   Server,
   KeyRound,
   FileCog,
   UsersRound,
   Mail,
-  Settings,
+  Settings as SettingsIcon, // Renamed to avoid conflict with component name
   Send as SendIcon,
   ServerCog,
   PanelLeft,
@@ -46,6 +46,7 @@ import {
   Users as UsersIconLucide,
   Briefcase,
   Smartphone,
+  Plug, // Added for Integrations tab
 } from 'lucide-react';
 import {
   Dialog,
@@ -125,7 +126,7 @@ const emailServiceProviders: EmailServiceProvider[] = [
   { id: "ses", name: "Amazon SES", icon: <Database className="h-5 w-5 text-orange-500" /> },
   { id: "mailgun", name: "Mailgun", icon: <SendIcon className="h-5 w-5 text-red-600" /> },
   { id: "sendgrid", name: "SendGrid", icon: <SendIcon className="h-5 w-5 text-sky-500" /> },
-  { id: "postmark", name: "Postmark", icon: <Mailbox className="h-5 w-5 text-black" /> },
+  { id: "postmark", name: "Postmark", icon: <Mailbox className="h-5 w-5 text-black dark:text-white" /> },
   { id: "brevo", name: "Brevo (Sendinblue)", icon: <SendIcon className="h-5 w-5 text-teal-500" /> },
   { id: "mailjet", name: "Mailjet", icon: <SendIcon className="h-5 w-5 text-yellow-500" /> },
   { id: "zoho_mail", name: "Zoho Mail", icon: <Mail className="h-5 w-5 text-orange-600" /> },
@@ -169,12 +170,12 @@ interface StorageProviderConfigField {
   label: string;
   type: 'text' | 'password' | 'select';
   placeholder?: string;
-  options?: string[]; 
+  options?: string[];
 }
 interface StorageProviderOption {
   id: string;
   name: string;
-  icon?: React.ReactNode; 
+  icon?: React.ReactNode;
   configFields: StorageProviderConfigField[];
 }
 
@@ -213,7 +214,7 @@ const availableStorageProviders: StorageProviderOption[] = [
   {
     id: "google_drive",
     name: "Google Drive",
-    icon: <Cloud className="h-4 w-4 text-green-500" />, 
+    icon: <Cloud className="h-4 w-4 text-green-500" />,
     configFields: [
       { id: "clientId", label: "Google Client ID", type: "text", placeholder: "Your Google Client ID" },
       { id: "clientSecret", label: "Google Client Secret", type: "password", placeholder: "Your Google Client Secret" },
@@ -233,14 +234,14 @@ const availableStorageProviders: StorageProviderOption[] = [
   {
     id: "dropbox",
     name: "Dropbox",
-    icon: <Box className="h-4 w-4 text-blue-500" />, 
+    icon: <Box className="h-4 w-4 text-blue-500" />,
     configFields: [
       { id: "appKey", label: "Dropbox App Key", type: "text", placeholder: "Your Dropbox App Key" },
       { id: "appSecret", label: "Dropbox App Secret", type: "password", placeholder: "Your Dropbox App Secret" },
     ],
   },
   {
-    id: "box_storage", 
+    id: "box_storage",
     name: "Box",
     icon: <Box className="h-4 w-4 text-blue-700" />,
     configFields: [
@@ -270,17 +271,25 @@ const availableStorageProviders: StorageProviderOption[] = [
   },
 ];
 
+const integrationPlaceholders = [
+    { id: 'strapi', name: 'Strapi (CMS)', icon: <FileCog className="h-6 w-6 text-purple-600"/>, description: "Sync content from your Strapi CMS for AI suggestions and asset management." },
+    { id: 'wordpress', name: 'WordPress (CMS)', icon: <FileCog className="h-6 w-6 text-blue-500"/>, description: "Integrate with your WordPress site to pull blog posts and pages." },
+    { id: 'hubspot', name: 'HubSpot (CRM)', icon: <UsersRound className="h-6 w-6 text-orange-500"/>, description: "Sync contacts and company data from HubSpot for targeted campaigns." },
+    { id: 'ga', name: 'Google Analytics', icon: <BarChartBig className="h-6 w-6 text-yellow-500"/>, description: "Track campaign performance and website traffic more effectively." },
+];
+
 
 export default function SystemConfigurationPage() {
   const [selectedProvider, setSelectedProvider] = React.useState<AiProvider>("gemini");
   const [geminiApiKey, setGeminiApiKey] = React.useState("");
+  const [geminiModelName, setGeminiModelName] = React.useState("gemini-1.5-flash-latest");
   const [openRouterApiKey, setOpenRouterApiKey] = React.useState("");
   const [openRouterModelName, setOpenRouterModelName] = React.useState("");
   const [openAiApiKey, setOpenAiApiKey] = React.useState("");
-  const [openAiModelName, setOpenAiModelName] = React.useState("gpt-4o"); // Default OpenAI model
+  const [openAiModelName, setOpenAiModelName] = React.useState("gpt-4o");
   const [anthropicApiKey, setAnthropicApiKey] = React.useState("");
-  const [anthropicModelName, setAnthropicModelName] = React.useState("claude-3-opus-20240229"); // Default Anthropic model
-  
+  const [anthropicModelName, setAnthropicModelName] = React.useState("claude-3-opus-20240229");
+
   const [systemPassword, setSystemPassword] = React.useState("");
   const [isAiConfigModalOpen, setIsAiConfigModalOpen] = React.useState(false);
 
@@ -290,13 +299,13 @@ export default function SystemConfigurationPage() {
   const [smtpUser, setSmtpUser] = React.useState("");
   const [smtpPassword, setSmtpPassword] = React.useState("");
   const [smtpEncryption, setSmtpEncryption] = React.useState("tls");
-  const [apiKey, setApiKey] = React.useState(""); // For API-key based email services
-  const [apiSecret, setApiSecret] = React.useState(""); 
+  const [apiKey, setApiKey] = React.useState("");
+  const [apiSecret, setApiSecret] = React.useState("");
   const [sesAccessKey, setSesAccessKey] = React.useState("");
   const [sesSecretKey, setSesSecretKey] = React.useState("");
   const [sesRegion, setSesRegion] = React.useState("us-east-1");
   const [sesVerifiedIdentity, setSesVerifiedIdentity] = React.useState("");
-  const [sendingDomain, setSendingDomain] = React.useState(""); 
+  const [sendingDomain, setSendingDomain] = React.useState("");
 
   const [configuredDashboardChannels, setConfiguredDashboardChannels] = React.useState<ConfiguredSocialChannel[]>([]);
   const [openPlatformCombobox, setOpenPlatformCombobox] = React.useState(false);
@@ -316,25 +325,28 @@ export default function SystemConfigurationPage() {
       const stored = localStorage.getItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY);
       if (stored) {
         try {
-          const parsed = JSON.parse(stored) as ConfiguredSocialChannel[];
-           const hydratedChannels = parsed.map(storedChannel => {
+          // Ensure the stored data matches the expected structure and hydrate icons
+          const parsed = JSON.parse(stored) as Partial<ConfiguredSocialChannel>[]; // Allow partial during parse
+          const hydratedChannels = parsed.map(storedChannel => {
             const basePlatform = availableSocialPlatforms.find(p => p.id === storedChannel.id);
-            return {
-              ...storedChannel,
-              icon: basePlatform?.icon || <Share2Icon className="h-5 w-5 text-muted-foreground" />,
-              name: basePlatform?.name || storedChannel.name, // Ensure name is present
-              oauthPermissionsExample: basePlatform?.oauthPermissionsExample,
-            };
-          }).filter(ch => ch.name); // Filter out any that might not have a name after hydration
+            if (basePlatform) {
+              return {
+                ...basePlatform, // Get icon and name from base
+                status: storedChannel.status || 'Disconnected',
+                accountIdentifier: storedChannel.accountIdentifier,
+                // oauthPermissionsExample is part of basePlatform, no need to spread again if it's already in base
+              } as ConfiguredSocialChannel;
+            }
+            return null;
+          }).filter(Boolean) as ConfiguredSocialChannel[]; // Filter out nulls and assert type
+
           setConfiguredDashboardChannels(hydratedChannels);
         } catch (e) {
           console.error("Failed to parse configured dashboard channels from localStorage", e);
-           setConfiguredDashboardChannels([
-            { ...availableSocialPlatforms.find(p=>p.id==='facebook')!, status: 'Connected', accountIdentifier: 'MarketMaestro Page (Mock)' },
-            { ...availableSocialPlatforms.find(p=>p.id==='instagram')!, status: 'Disconnected', accountIdentifier: undefined },
-          ]);
+           setConfiguredDashboardChannels([]); // Fallback to empty or default
         }
       } else {
+         // Default if nothing in localStorage - ensure icons are present
          setConfiguredDashboardChannels([
             { ...availableSocialPlatforms.find(p=>p.id==='facebook')!, status: 'Connected', accountIdentifier: 'MarketMaestro Page (Mock)' },
             { ...availableSocialPlatforms.find(p=>p.id==='instagram')!, status: 'Disconnected', accountIdentifier: undefined },
@@ -343,12 +355,12 @@ export default function SystemConfigurationPage() {
       }
     }
   }, []);
-  
+
   const handleAddPlatformToConfiguredList = (platform: AvailableSocialPlatform) => {
     if (!configuredDashboardChannels.find(p => p.id === platform.id)) {
       const newChannel: ConfiguredSocialChannel = { ...platform, status: 'Disconnected', accountIdentifier: undefined };
       setConfiguredDashboardChannels(prev => [...prev, newChannel]);
-      setExpandedChannelId(platform.id); // Open the new channel's connection panel
+      setExpandedChannelId(platform.id);
       toast({ title: `${platform.name} added to configuration list. Please connect it.`});
     } else {
       toast({ title: `${platform.name} is already in your configuration list.`, variant: "default"});
@@ -356,25 +368,21 @@ export default function SystemConfigurationPage() {
     setPlatformSearchValue("");
     setOpenPlatformCombobox(false);
   };
-  
+
   const handleRemoveChannelFromConfiguration = (platformId: string) => {
     setConfiguredDashboardChannels(prev => prev.filter(p => p.id !== platformId));
     if (expandedChannelId === platformId) {
       setExpandedChannelId(null);
     }
-    toast({ title: "Platform removed from configuration."});
+    toast({ title: "Platform removed from configuration list."});
   };
 
- const performConnectionAction = React.useCallback((channelId: string, currentStatus: ConfiguredSocialChannel['status']) => {
+ const performConnectionAction = React.useCallback((channelId: string, actionType: 'Connect' | 'Disconnect' | 'Re-authenticate') => {
     let toastTitle = "";
     let newStatus: ConfiguredSocialChannel['status'] = 'Disconnected';
     let newAccountIdentifier: string | undefined = undefined;
     const channel = configuredDashboardChannels.find(c => c.id === channelId);
     if (!channel) return;
-
-    const actionType = currentStatus === 'Disconnected' ? 'Connect' : 
-                       currentStatus === 'Needs Re-auth' ? 'Re-authenticate' : 
-                       'Disconnect'; // Default for Connected
 
     switch (actionType) {
       case 'Connect':
@@ -382,7 +390,7 @@ export default function SystemConfigurationPage() {
         newStatus = 'Connected';
         newAccountIdentifier = `${channel.name} User (Mock)`;
         break;
-      case 'Disconnect': // This case will be triggered if the currentStatus is 'Connected'
+      case 'Disconnect':
         toastTitle = `Disconnecting ${channel.name}...`;
         newStatus = 'Disconnected';
         newAccountIdentifier = undefined;
@@ -390,10 +398,10 @@ export default function SystemConfigurationPage() {
       case 'Re-authenticate':
         toastTitle = `Re-authenticating ${channel.name}...`;
         newStatus = 'Connected';
-        newAccountIdentifier = channel.accountIdentifier || `${channel.name} User (Mock)`; 
+        newAccountIdentifier = channel.accountIdentifier || `${channel.name} User (Mock)`;
         break;
     }
-    
+
     // Simulate API call
     setTimeout(() => {
       setConfiguredDashboardChannels(prevChannels =>
@@ -401,12 +409,13 @@ export default function SystemConfigurationPage() {
           ch.id === channelId ? { ...ch, status: newStatus, accountIdentifier: newAccountIdentifier } : ch
         )
       );
-      if (actionType !== 'Disconnect') { // Don't close if we just disconnected from manage view
-           setExpandedChannelId(null); 
+      // Don't close the panel if the action was from within the panel for 'Connect' or 'Re-authenticate'
+      // Only close it if it was a 'Disconnect' from the main row or a 'Manage' toggle.
+      // For this prototype, we'll close it for Connect/Re-auth from panel, but keep it for Disconnect from main row.
+      if (actionType === 'Connect' || actionType === 'Re-authenticate') {
+           setExpandedChannelId(null);
       }
-      setTimeout(() => { // Ensure state update has propagated before toasting
-         toast({ title: `${toastTitle.replace('...','')} (Simulation Successful)` });
-      }, 0);
+      toast({ title: `${toastTitle.replace('...','')} (Simulation Successful)` });
     }, 500);
   }, [configuredDashboardChannels, toast]);
 
@@ -415,47 +424,48 @@ export default function SystemConfigurationPage() {
     setExpandedChannelId(prevId => (prevId === channelId ? null : channelId));
   };
 
-  const handleSaveSocialMediaConnections = () => {
-    // Filter out icon and oauthPermissionsExample before saving
+  const handleSaveSocialMediaDashboardPreferences = () => {
     const channelsToSave = configuredDashboardChannels.map(({ icon, oauthPermissionsExample, ...rest }) => rest);
     localStorage.setItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY, JSON.stringify(channelsToSave));
     toast({
-      title: "Social Media Dashboard Preferences Saved",
-      description: "Your social media selections for the dashboard overview have been saved locally.",
+      title: "Dashboard Preferences Saved",
+      description: "Your selections for which channels appear on the Dashboard Overview have been saved locally.",
       variant: "default",
     });
   };
 
   const handleSaveAiConfiguration = async () => {
-    if (systemPassword !== "password123") { 
+    if (systemPassword !== "password123") {
       toast({ title: "Authentication Failed", description: "Incorrect system admin password.", variant: "destructive" });
       return;
     }
 
     const configData : AiConfigurationInput = {
-      provider: selectedProvider as "gemini" | "openrouter", // Ensure type safety
+      provider: selectedProvider as "gemini" | "openrouter" | "openai" | "anthropic",
       geminiApiKey: selectedProvider === 'gemini' ? geminiApiKey : undefined,
+      geminiModelName: selectedProvider === 'gemini' ? geminiModelName : undefined,
       openRouterApiKey: selectedProvider === 'openrouter' ? openRouterApiKey : undefined,
       openRouterModel: selectedProvider === 'openrouter' ? openRouterModelName : undefined,
-      // Include OpenAI and Anthropic fields conditionally if they are part of AiConfigurationInput
-      ...(selectedProvider === 'openai' && { openAiApiKey, openAiModelName }),
-      ...(selectedProvider === 'anthropic' && { anthropicApiKey, anthropicModelName }),
+      openAiApiKey: selectedProvider === 'openai' ? openAiApiKey : undefined,
+      openAiModelName: selectedProvider === 'openai' ? openAiModelName : undefined,
+      anthropicApiKey: selectedProvider === 'anthropic' ? anthropicApiKey : undefined,
+      anthropicModelName: selectedProvider === 'anthropic' ? anthropicModelName : undefined,
     };
-    
+
     const result = await handleUpdateAiConfigurationAction(configData);
     if (result.success) {
       toast({ title: "AI Configuration Update Noted", description: (result.message || "Settings noted.") + " Please update your .env file and restart the server manually as instructed.", variant: "default", duration: 10000 });
     } else {
       let errorDescription = "An unknown error occurred.";
       if (typeof result.error === 'string') errorDescription = result.error;
-      else if (result.error && 'flatten' in result.error) { 
+      else if (result.error && 'flatten' in result.error) {
         const flatError = (result.error as any).flatten();
         const fieldErrors = Object.entries(flatError.fieldErrors).map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`).join('; ');
         errorDescription = `Validation failed. ${fieldErrors || 'Please check your input.'}`;
       }
       toast({ title: "AI Configuration Update Failed", description: errorDescription, variant: "destructive" });
     }
-    setSystemPassword(""); 
+    setSystemPassword("");
     setIsAiConfigModalOpen(false);
   };
 
@@ -464,7 +474,7 @@ export default function SystemConfigurationPage() {
     const currentService = emailServiceProviders.find(p=>p.id === selectedEmailService);
     switch (selectedEmailService) {
       case "generic_smtp": settingsToLog = { ...settingsToLog, smtpHost, smtpPort, smtpUser, smtpEncryption, smtpPassword: smtpPassword ? '********' : '' }; break;
-      case "gmail": case "outlook": settingsToLog = { ...settingsToLog, connectionMethod: "OAuth 2.0 (Simulated)" }; break; 
+      case "gmail": case "outlook": settingsToLog = { ...settingsToLog, connectionMethod: "OAuth 2.0 (Simulated)" }; break;
       case "ses": settingsToLog = { ...settingsToLog, sesAccessKey, sesSecretKey: sesSecretKey ? '********' : '', sesRegion, sesVerifiedIdentity }; break;
       case "mailgun": case "sendgrid": case "postmark": case "brevo": case "mailjet": case "zoho_mail":
         settingsToLog = { ...settingsToLog, apiKey: apiKey ? '********' : '', apiSecret: apiSecret ? '********' : '', sendingDomain };
@@ -475,9 +485,9 @@ export default function SystemConfigurationPage() {
   };
 
   const getStatusBadgeVariant = (status: ConfiguredSocialChannel['status']): "default" | "secondary" | "destructive" | "outline" => {
-    if (status === 'Connected') return 'default'; 
-    if (status === 'Needs Re-auth') return 'destructive'; 
-    return 'secondary'; 
+    if (status === 'Connected') return 'default';
+    if (status === 'Needs Re-auth') return 'destructive';
+    return 'secondary';
   };
 
   const handleStorageConfigInputChange = (fieldId: string, value: string) => {
@@ -493,12 +503,12 @@ export default function SystemConfigurationPage() {
     console.log("Saving Storage Configuration (Simulation):", { Provider: provider?.name, Config: storageConfigInputs });
     toast({ title: "Storage Configuration Saved (Simulation)", description: `Settings for ${provider?.name} have been noted.` });
   };
-  
+
   const activeServiceIcons = React.useMemo(() => {
     const icons: React.ReactNode[] = [];
     // AI
     if (selectedProvider === 'gemini' && geminiApiKey) {
-      icons.push(<Tooltip key="ai-gemini-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: Google Gemini</p></TooltipContent></Tooltip>);
+      icons.push(<Tooltip key="ai-gemini-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: Google Gemini ({geminiModelName})</p></TooltipContent></Tooltip>);
     } else if (selectedProvider === 'openrouter' && openRouterApiKey && openRouterModelName) {
       icons.push(<Tooltip key="ai-openrouter-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: OpenRouter ({openRouterModelName})</p></TooltipContent></Tooltip>);
     } else if (selectedProvider === 'openai' && openAiApiKey && openAiModelName) {
@@ -506,16 +516,16 @@ export default function SystemConfigurationPage() {
     } else if (selectedProvider === 'anthropic' && anthropicApiKey && anthropicModelName) {
       icons.push(<Tooltip key="ai-anthropic-active"><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Cpu className="h-5 w-5" /></Button></TooltipTrigger><TooltipContent><p>AI: Anthropic ({anthropicModelName})</p></TooltipContent></Tooltip>);
     }
-    
+
     // SMTP
     const smtpService = emailServiceProviders.find(p => p.id === selectedEmailService);
     if (smtpService && (
         (selectedEmailService === "generic_smtp" && smtpHost && smtpPort && smtpUser) ||
         (selectedEmailService === "ses" && sesAccessKey && sesSecretKey && sesRegion && sesVerifiedIdentity) ||
-        (["gmail", "outlook"].includes(selectedEmailService) /* Assuming OAuth is "configured" if selected */) ||
+        (["gmail", "outlook"].includes(selectedEmailService)) || // Assume OAuth is "configured" if selected
         (!["generic_smtp", "gmail", "outlook", "ses"].includes(selectedEmailService) && apiKey)
     )) {
-         icons.push(<Tooltip key={`smtp-${smtpService.id}-active`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7">{React.cloneElement(smtpService.icon as React.ReactElement, { className: "h-5 w-5" })}</Button></TooltipTrigger><TooltipContent><p>SMTP: {smtpService.name}</p></TooltipContent></Tooltip>);
+         icons.push(<Tooltip key={`smtp-${smtpService.id}-active`}><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7">{React.cloneElement(smtpService.icon as React.ReactElement, { className: "h-5 w-5" })}</Button></TooltipTrigger><TooltipContent><p>Email Sending: {smtpService.name}</p></TooltipContent></Tooltip>);
     }
     // Social Media
     configuredDashboardChannels.filter(c => c.status === 'Connected').slice(0, 3).forEach(channel => {
@@ -535,9 +545,9 @@ export default function SystemConfigurationPage() {
 
     return icons;
   }, [
-    selectedProvider, geminiApiKey, openRouterApiKey, openRouterModelName, openAiApiKey, openAiModelName, anthropicApiKey, anthropicModelName,
+    selectedProvider, geminiApiKey, geminiModelName, openRouterApiKey, openRouterModelName, openAiApiKey, openAiModelName, anthropicApiKey, anthropicModelName,
     selectedEmailService, smtpHost, smtpPort, smtpUser, sesAccessKey, sesSecretKey, sesRegion, sesVerifiedIdentity, apiKey,
-    configuredDashboardChannels, 
+    configuredDashboardChannels,
     selectedStorageProviderId, storageConfigInputs
   ]);
 
@@ -551,7 +561,7 @@ export default function SystemConfigurationPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <TooltipProvider>
-            <Card className="mb-6 bg-muted/30">
+            <Card className="mb-6 bg-muted/30 dark:bg-card/50 border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-medium flex items-center">
                   <ServerCog className="mr-2 h-5 w-5 text-muted-foreground" />
@@ -561,23 +571,24 @@ export default function SystemConfigurationPage() {
                   Quick view of currently configured core services.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-wrap items-center gap-2 py-3">
+              <CardContent className="flex flex-wrap items-center gap-1 py-3">
                 {activeServiceIcons.length > 0 ? activeServiceIcons.map((icon, index) => (
                   <React.Fragment key={index}>{icon}</React.Fragment>
                 )) : (
-                  <p className="text-sm text-muted-foreground">No core services configured yet.</p>
+                  <p className="text-sm text-muted-foreground px-2">No core services appear to be configured yet.</p>
                 )}
               </CardContent>
             </Card>
           </TooltipProvider>
 
           <Tabs defaultValue="ai-settings" className="w-full">
-             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-1 mb-6 h-auto">
+             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-1 mb-6 h-auto">
               <TabsTrigger value="ai-settings" className="py-2 text-xs sm:text-sm"><Cpu className="mr-1 h-4 w-4 hidden sm:inline-block"/>AI Settings</TabsTrigger>
               <TabsTrigger value="smtp-settings" className="py-2 text-xs sm:text-sm"><Mailbox className="mr-1 h-4 w-4 hidden sm:inline-block"/>SMTP Settings</TabsTrigger>
               <TabsTrigger value="email-config" className="py-2 text-xs sm:text-sm"><Mail className="mr-1 h-4 w-4 hidden sm:inline-block"/>Email Config</TabsTrigger>
               <TabsTrigger value="social-accounts" className="py-2 text-xs sm:text-sm"><Share2Icon className="mr-1 h-4 w-4 hidden sm:inline-block"/>Social Accounts</TabsTrigger>
               <TabsTrigger value="storage-settings" className="py-2 text-xs sm:text-sm"><HardDrive className="mr-1 h-4 w-4 hidden sm:inline-block"/>Storage Settings</TabsTrigger>
+              <TabsTrigger value="integrations" className="py-2 text-xs sm:text-sm"><Plug className="mr-1 h-4 w-4 hidden sm:inline-block"/>Integrations</TabsTrigger>
             </TabsList>
 
             <TabsContent value="ai-settings">
@@ -602,15 +613,26 @@ export default function SystemConfigurationPage() {
                 </div>
 
                 {selectedProvider === 'gemini' && (
-                  <div className="space-y-2 animate-in fade-in duration-300">
-                    <Label htmlFor="geminiApiKey">Google Gemini API Key</Label>
-                    <Input
-                      id="geminiApiKey"
-                      type="password"
-                      placeholder="Enter your Gemini API Key"
-                      value={geminiApiKey}
-                      onChange={(e) => setGeminiApiKey(e.target.value)}
-                    />
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div className="space-y-2">
+                        <Label htmlFor="geminiApiKey">Google Gemini API Key</Label>
+                        <Input
+                        id="geminiApiKey"
+                        type="password"
+                        placeholder="Enter your Gemini API Key"
+                        value={geminiApiKey}
+                        onChange={(e) => setGeminiApiKey(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="geminiModelName">Gemini Model Name (Optional)</Label>
+                        <Input
+                        id="geminiModelName"
+                        placeholder="e.g., gemini-1.5-flash-latest (default)"
+                        value={geminiModelName}
+                        onChange={(e) => setGeminiModelName(e.target.value)}
+                        />
+                    </div>
                   </div>
                 )}
 
@@ -627,7 +649,7 @@ export default function SystemConfigurationPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="openRouterModelName">OpenRouter Model Name</Label>
+                      <Label htmlFor="openRouterModelName">OpenRouter Model String</Label>
                       <Input
                         id="openRouterModelName"
                         placeholder="e.g., openai/gpt-4o, anthropic/claude-3-opus"
@@ -635,8 +657,8 @@ export default function SystemConfigurationPage() {
                         onChange={(e) => setOpenRouterModelName(e.target.value)}
                       />
                        <p className="text-xs text-muted-foreground">
-                        Specify the model identifier from OpenRouter.
-                        Refer to <Link href="https://openrouter.ai/docs" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">OpenRouter documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link> for available models and pricing.
+                        Specify the model identifier string from OpenRouter (e.g., `mistralai/mistral-7b-instruct`).
+                        Refer to <Link href="https://openrouter.ai/docs#models" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">OpenRouter documentation <ExternalLink className="inline-block h-3 w-3 ml-0.5"/></Link> for available models.
                       </p>
                     </div>
                   </div>
@@ -700,8 +722,8 @@ export default function SystemConfigurationPage() {
                   <AlertCircleIcon className="h-4 w-4" />
                   <AlertTitle>Model Costs & Configuration</AlertTitle>
                   <AlertDescription className="text-muted-foreground">
-                    Using models via OpenRouter, OpenAI, or Anthropic may incur costs. Please review pricing on their respective platforms.
-                    Genkit configuration in <code>src/ai/genkit.ts</code> reads provider and model details from the <code>.env</code> file. This UI helps you prepare the values for your <code>.env</code>.
+                    Using models via OpenRouter, OpenAI, or Anthropic will likely incur costs based on their pricing.
+                    This UI helps you prepare values for your <code>.env</code> file. Genkit configuration in <code>src/ai/genkit.ts</code> reads provider and model details from <code>.env</code> variables.
                   </AlertDescription>
                 </Alert>
                  <Dialog open={isAiConfigModalOpen} onOpenChange={setIsAiConfigModalOpen}>
@@ -713,7 +735,7 @@ export default function SystemConfigurationPage() {
                         <DialogTitle>Confirm AI Configuration Update</DialogTitle>
                         <DialogDescription>
                             Please enter the system admin password (mock: password123).
-                            You will be prompted with instructions to update your <code>.env</code> file, and the server will need to be restarted manually after that.
+                            You will be shown instructions to update your <code>.env</code> file. The server will need to be restarted manually after that for changes to take effect.
                         </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-3">
@@ -785,7 +807,10 @@ export default function SystemConfigurationPage() {
 
                 {(selectedEmailService === "gmail" || selectedEmailService === "outlook") && (
                   <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
-                    <h4 className="font-medium">Connect via OAuth 2.0 (Recommended)</h4>
+                    <h4 className="font-medium flex items-center">
+                        {emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon}
+                        <span className="ml-2">Connect via OAuth 2.0 (Recommended)</span>
+                    </h4>
                     <p className="text-sm text-muted-foreground"> For {emailServiceProviders.find(p=>p.id === selectedEmailService)?.name}, connecting via OAuth is more secure. </p>
                     <Button variant="outline" onClick={() => toast({ title: "OAuth Connection (Simulation)", description: `Redirecting to ${selectedEmailService === "gmail" ? "Google" : "Microsoft"} for authorization...` })}> <Link2IconLucide className="mr-2 h-4 w-4"/> Connect with {selectedEmailService === "gmail" ? "Google" : "Microsoft"} </Button>
                     <p className="text-sm">Status: <Badge variant="secondary">Not Connected (Simulation)</Badge></p>
@@ -794,7 +819,10 @@ export default function SystemConfigurationPage() {
 
                 {selectedEmailService === "ses" && (
                    <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
-                    <h4 className="font-medium">Amazon SES Configuration</h4>
+                    <h4 className="font-medium flex items-center">
+                        {emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon}
+                        <span className="ml-2">Amazon SES Configuration</span>
+                    </h4>
                     <div className="space-y-1.5"> <Label htmlFor="sesAccessKey">Access Key ID</Label> <Input id="sesAccessKey" placeholder="Your AWS Access Key ID" value={sesAccessKey} onChange={e => setSesAccessKey(e.target.value)} /> </div>
                     <div className="space-y-1.5"> <Label htmlFor="sesSecretKey">Secret Access Key</Label> <Input id="sesSecretKey" type="password" placeholder="Your AWS Secret Access Key" value={sesSecretKey} onChange={e => setSesSecretKey(e.target.value)}/> </div>
                     <div className="space-y-1.5"> <Label htmlFor="sesRegion">AWS Region</Label> <Select value={sesRegion} onValueChange={setSesRegion}> <SelectTrigger id="sesRegion"> <SelectValue placeholder="Select AWS Region"/> </SelectTrigger> <SelectContent> {awsRegions.map(region => <SelectItem key={region} value={region}>{region}</SelectItem>)} </SelectContent> </Select> </div>
@@ -805,7 +833,10 @@ export default function SystemConfigurationPage() {
 
                 {["mailgun", "sendgrid", "postmark", "brevo", "mailjet", "zoho_mail"].includes(selectedEmailService) && (
                   <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
-                    <h4 className="font-medium">Configure with API Key: {emailServiceProviders.find(p=>p.id === selectedEmailService)?.name}</h4>
+                    <h4 className="font-medium flex items-center">
+                        {emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon}
+                        <span className="ml-2">Configure with API Key: {emailServiceProviders.find(p=>p.id === selectedEmailService)?.name}</span>
+                    </h4>
                     <div className="space-y-1.5"> <Label htmlFor="apiKey">API Key</Label> <Input id="apiKey" type="password" placeholder={`Enter ${emailServiceProviders.find(p=>p.id === selectedEmailService)?.name} API Key`} value={apiKey} onChange={e => setApiKey(e.target.value)} /> </div>
                     <div className="space-y-1.5"> <Label htmlFor="apiSecret">API Secret / Password (Optional)</Label> <Input id="apiSecret" type="password" placeholder="Enter API Secret if required" value={apiSecret} onChange={e => setApiSecret(e.target.value)} /> </div>
                     {(selectedEmailService === "mailgun" || selectedEmailService === "sendgrid" || selectedEmailService === "brevo") &&
@@ -833,8 +864,8 @@ export default function SystemConfigurationPage() {
             <TabsContent value="social-accounts">
               <div className="space-y-4 p-4 border rounded-md bg-card">
                 <h3 className="text-lg font-medium mb-2 flex items-center"> <Share2Icon className="h-5 w-5 mr-2 text-primary" /> Social Media Account Connections </h3>
-                <p className="text-sm text-muted-foreground mb-1"> Add platforms your brand uses, manage their connection status, and select which ones appear on the main Dashboard Overview. </p>
-                
+                <p className="text-sm text-muted-foreground mb-1"> Add social platforms your brand uses. Connected platforms here will be available for selection on the main Dashboard Overview for quick stats display. </p>
+
                 <div className="space-y-2">
                     <Label htmlFor="platformCombobox">Add Platform to Configuration</Label>
                     <Popover open={openPlatformCombobox} onOpenChange={setOpenPlatformCombobox}>
@@ -878,17 +909,16 @@ export default function SystemConfigurationPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
-                                    <Badge variant={getStatusBadgeVariant(channel.status)} className="text-xs"> {channel.status} </Badge>
-                                    
+                                    <Badge variant={getStatusBadgeVariant(channel.status)} className="text-xs mr-1">{channel.status}</Badge>
                                     {channel.status === 'Disconnected' && (
                                         <Button variant="default" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Connect</Button>
                                     )}
-                                    {channel.status === 'Connected' && (<> 
-                                        <Button variant="ghost" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Manage</Button> 
-                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => performConnectionAction(channel.id, 'Connected')}>Disconnect</Button> 
+                                    {channel.status === 'Connected' && (<>
+                                        <Button variant="ghost" size="sm" onClick={() => handleToggleManageSection(channel.id)}>Manage</Button>
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80" onClick={() => performConnectionAction(channel.id, 'Disconnect')}>Disconnect</Button>
                                     </>)}
                                     {channel.status === 'Needs Re-auth' && (
-                                        <Button variant="default" size="sm" onClick={() => handleToggleManageSection(channel.id)} className="bg-muted hover:bg-card border border-accent text-primary-foreground">Re-authenticate</Button> 
+                                        <Button variant="default" size="sm" onClick={() => handleToggleManageSection(channel.id)} className="bg-muted hover:bg-card border border-accent text-primary-foreground">Re-authenticate</Button>
                                     )}
                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 h-8 w-8" onClick={() => handleRemoveChannelFromConfiguration(channel.id)} title={`Remove ${channel.name} from configuration list`}> <Trash2 className="h-4 w-4"/> <span className="sr-only">Remove {channel.name}</span> </Button>
                                 </div>
@@ -906,7 +936,7 @@ export default function SystemConfigurationPage() {
                                       <div> <Label htmlFor={`appId-${channel.id}`} className="text-xs">App ID / Client ID (if applicable)</Label> <Input id={`appId-${channel.id}`} placeholder="Enter App ID (optional)" className="h-8 text-xs mt-0.5"/> </div>
                                       <p className="text-xs text-muted-foreground">Note: Most connections are via OAuth. Enter details above only if specifically required by the platform's alternative connection method.</p>
                                     </div>
-                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Disconnected')}> <Link2IconLucide className="mr-2 h-4 w-4" /> Proceed to Connect with {channel.name} </Button>
+                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Connect')}> <Link2IconLucide className="mr-2 h-4 w-4" /> Proceed to Connect with {channel.name} </Button>
                                   </>
                                 )}
                                  { (channel.status === 'Needs Re-auth') && (
@@ -917,16 +947,16 @@ export default function SystemConfigurationPage() {
                                     <div className="space-y-3 my-3">
                                       <div> <Label htmlFor={`reauth-apiKey-${channel.id}`} className="text-xs">API Key (if applicable)</Label> <Input id={`reauth-apiKey-${channel.id}`} placeholder="Confirm API Key (optional)" className="h-8 text-xs mt-0.5"/> </div>
                                     </div>
-                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Needs Re-auth')}> <RefreshCw className="mr-2 h-4 w-4" /> Proceed to Re-authenticate {channel.name} </Button>
+                                    <Button variant="default" className="w-full" onClick={() => performConnectionAction(channel.id, 'Re-authenticate')}> <RefreshCw className="mr-2 h-4 w-4" /> Proceed to Re-authenticate {channel.name} </Button>
                                   </>
                                 )}
                                 {channel.status === 'Connected' && (
                                   <>
                                     <h4 className="text-sm font-semibold mb-2 text-foreground">Connection Details for {channel.name}</h4>
                                     <div className="space-y-3 text-xs">
-                                        <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Connected Account</Label> <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words"> {channel.accountIdentifier || "N/A"} </p> </div>
+                                        <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Connected Account</Label> <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words">{channel.accountIdentifier || "N/A"}</p> </div>
                                         <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Permissions Granted (Mock)</Label> <div className="text-xs bg-background/70 p-2 rounded-md leading-relaxed break-words"> Standard permissions for posting, reading engagement, and managing insights have been granted (simulation). Specific permissions vary by platform and are handled during the OAuth connection process. {(channel.oauthPermissionsExample && channel.oauthPermissionsExample.length > 0) && ( <> <br/>Example requested scopes might include: {channel.oauthPermissionsExample.join(', ')}.</> )} </div> </div>
-                                        <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Connected Since</Label> <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words"> January 1, 2024 (Mock) </p> </div>
+                                        <div className="space-y-1"> <Label className="text-xs text-muted-foreground">Connected Since</Label> <p className="text-sm font-medium bg-background/70 p-2 rounded-md break-words">January 1, 2024 (Mock)</p> </div>
                                         <div className="space-y-1"> <Label htmlFor={`customApiEndpoint-${channel.id}`} className="text-xs text-muted-foreground">Custom API Endpoint (Optional)</Label> <Input id={`customApiEndpoint-${channel.id}`} placeholder="e.g., https://graph.facebook.com/v18.0" className="text-xs h-8" disabled/> <p className="text-xs text-muted-foreground">For advanced users with specific API needs (not functional).</p> </div>
                                         <div className="flex justify-end gap-2 pt-2">
                                             <Button type="button" variant="outline" size="sm" onClick={() => { setConfiguredDashboardChannels(prev => prev.map(c => c.id === channel.id ? {...c, status: 'Needs Re-auth'} : c)); setExpandedChannelId(null); setTimeout(() => setExpandedChannelId(channel.id), 50); setTimeout(() => toast({ title: "Refresh Connection (Simulated)", description: `${channel.name} needs re-authentication.`}), 100); }}> <RefreshCw className="mr-2 h-4 w-4"/> Refresh </Button>
@@ -946,7 +976,7 @@ export default function SystemConfigurationPage() {
                     No platforms configured yet. Add platforms using the selector above.
                   </p>
                 )}
-                 <Button onClick={handleSaveSocialMediaConnections} className="mt-6">Save Dashboard Preferences</Button>
+                 <Button onClick={handleSaveSocialMediaDashboardPreferences} className="mt-6">Save Dashboard Preferences</Button>
                  <p className="text-xs text-muted-foreground mt-2">This saves which of your configured channels appear on the main Dashboard Overview (only 'Connected' ones will be shown).</p>
               </div>
             </TabsContent>
@@ -997,17 +1027,44 @@ export default function SystemConfigurationPage() {
                     )}
                   </div>
                 ))}
-                
+
                 {selectedStorageProviderId && ( <Button onClick={handleSaveStorageConfiguration} className="mt-4">Save Storage Configuration</Button> )}
                 {!selectedStorageProviderId && ( <p className="text-xs text-muted-foreground mt-2">Select a provider to see configuration options.</p> )}
               </div>
             </TabsContent>
-            
+
+            <TabsContent value="integrations">
+                <div className="space-y-4 p-4 border rounded-md bg-card">
+                    <h3 className="text-lg font-medium mb-2 flex items-center">
+                        <Plug className="mr-2 h-5 w-5 text-primary"/> Third-Party Integrations
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                        Connect MarketMaestro with other services like your existing CMS, CRM, or analytics platforms. (This section is a placeholder for future integration capabilities).
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        {integrationPlaceholders.map(integration => (
+                            <Card key={integration.id} className="shadow-sm">
+                                <CardHeader className="flex flex-row items-center space-x-3 pb-3">
+                                    {integration.icon}
+                                    <CardTitle className="text-base">{integration.name}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-xs text-muted-foreground pb-3">
+                                    {integration.description}
+                                </CardContent>
+                                <CardFooter className="pb-3">
+                                    <Button variant="outline" size="sm" disabled className="w-full">
+                                        Connect (Coming Soon)
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            </TabsContent>
+
           </Tabs>
         </CardContent>
       </Card>
     </MainLayout>
   );
 }
-
-    
