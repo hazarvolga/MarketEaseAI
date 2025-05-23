@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { ListPlus, Edit, FileText as FileTextIcon } from 'lucide-react'; // Renamed to avoid conflict
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils'; // Added missing import
 
 interface ContentTypeMock {
   id: string;
