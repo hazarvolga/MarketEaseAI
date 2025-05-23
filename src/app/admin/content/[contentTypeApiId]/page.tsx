@@ -8,20 +8,30 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit, Trash2, ListFilter, Search, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ListFilter, Search, AlertTriangle, Blocks } from 'lucide-react';
 import type { ContentTypeMock } from '@/lib/content-type-data';
 import { initialContentTypes } from '@/lib/content-type-data';
-import { Input } from '@/components/ui/input'; // Added Input import
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 const LOCAL_STORAGE_ENTRIES_KEY = 'marketMaestroCmsEntries';
+
+interface ContentEntry {
+  id: string;
+  status: 'draft' | 'published';
+  createdAt: string;
+  updatedAt: string;
+  [key: string]: any; // For dynamic fields
+}
 
 export default function ContentEntriesPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const contentTypeApiId = params.contentTypeApiId as string;
 
   const [contentType, setContentType] = useState<ContentTypeMock | null | undefined>(undefined);
-  const [entries, setEntries] = useState<any[]>([]);
+  const [entries, setEntries] = useState<ContentEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -33,52 +43,70 @@ export default function ContentEntriesPage() {
         try {
           const allEntriesString = localStorage.getItem(LOCAL_STORAGE_ENTRIES_KEY);
           const allEntries = allEntriesString ? JSON.parse(allEntriesString) : {};
-          const entriesForThisType = allEntries[contentTypeApiId] || [];
-          setEntries(entriesForThisType);
+          const entriesForThisType: ContentEntry[] = allEntries[contentTypeApiId] || [];
+          setEntries(entriesForThisType.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
         } catch (error) {
           console.error("Error loading entries from localStorage:", error);
           setEntries([]);
+           toast({
+            title: "Error Loading Entries",
+            description: "Could not load entries from local storage. See console for details.",
+            variant: "destructive",
+          });
         }
       } else {
         setEntries([]);
       }
       setIsLoading(false);
     }
-  }, [contentTypeApiId]);
+  }, [contentTypeApiId, toast]);
 
   const displayFields = useMemo(() => {
     if (!contentType) return [{ apiIdentifier: 'id', name: 'ID' }, { apiIdentifier: 'status', name: 'Status' }];
-    const textFields = contentType.fields.filter(f => f.type === 'Text' || f.type === 'String'); // Assuming String might be used
-    if (textFields.length > 0) {
-      return [
-        { apiIdentifier: textFields[0].apiIdentifier, name: textFields[0].name },
-        ...(textFields.length > 1 ? [{ apiIdentifier: textFields[1].apiIdentifier, name: textFields[1].name }] : [{ apiIdentifier: 'status', name: 'Status' }]),
-        { apiIdentifier: 'updatedAt', name: 'Last Updated'}
-      ];
+    
+    const fieldsToShow = contentType.fields
+      .filter(f => ['Text', 'String', 'Number', 'Date', 'Boolean'].includes(f.type)) // Show common simple types
+      .slice(0, 2) // Limit to first two simple fields for brevity
+      .map(f => ({ apiIdentifier: f.apiIdentifier, name: f.name }));
+
+    // Ensure at least one primary field is shown, or default to 'name' or 'title' if common
+    if (fieldsToShow.length === 0) {
+        const commonNameFields = ['name', 'title', 'headline'];
+        const primaryDisplayField = contentType.fields.find(f => commonNameFields.includes(f.apiIdentifier.toLowerCase()) && f.type === 'Text');
+        if (primaryDisplayField) {
+            fieldsToShow.push({ apiIdentifier: primaryDisplayField.apiIdentifier, name: primaryDisplayField.name});
+        } else if (contentType.fields.length > 0 && contentType.fields[0].type === 'Text') {
+             fieldsToShow.push({ apiIdentifier: contentType.fields[0].apiIdentifier, name: contentType.fields[0].name});
+        }
     }
-    return [{ apiIdentifier: 'id', name: 'ID' }, { apiIdentifier: 'status', name: 'Status' }, { apiIdentifier: 'updatedAt', name: 'Last Updated'}];
+    
+    // Always include ID, Status, and Last Updated
+    return [
+      ...(fieldsToShow.length > 0 ? fieldsToShow : [{ apiIdentifier: 'id', name: 'ID (Fallback)' }]),
+      { apiIdentifier: 'status', name: 'Status' }, 
+      { apiIdentifier: 'updatedAt', name: 'Last Updated'}
+    ];
   }, [contentType]);
 
 
   const handleDeleteEntry = (entryId: string) => {
-    // This is a mock delete, would involve confirmation and API call in real app
-    if (confirm("Are you sure you want to delete this entry? (Simulation)")) {
+    if (confirm("Are you sure you want to delete this entry? This action cannot be undone. (Simulation)")) {
         try {
             const allEntriesString = localStorage.getItem(LOCAL_STORAGE_ENTRIES_KEY);
             const allEntries = allEntriesString ? JSON.parse(allEntriesString) : {};
-            let entriesForThisType = allEntries[contentTypeApiId] || [];
+            let entriesForThisType: ContentEntry[] = allEntries[contentTypeApiId] || [];
             
-            entriesForThisType = entriesForThisType.filter((entry: any) => entry.id !== entryId);
+            entriesForThisType = entriesForThisType.filter(entry => entry.id !== entryId);
             
             allEntries[contentTypeApiId] = entriesForThisType;
             localStorage.setItem(LOCAL_STORAGE_ENTRIES_KEY, JSON.stringify(allEntries));
             
-            setEntries(entriesForThisType); // Update local state to re-render
+            setEntries(entriesForThisType.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
             
-            // toast({ title: "Entry Deleted", description: `Entry ${entryId} has been deleted (simulation).` });
+            toast({ title: "Entry Deleted", description: `Entry has been deleted successfully.` });
         } catch (error) {
             console.error("Error deleting entry from localStorage:", error);
-            // toast({ title: "Delete Error", description: "Could not delete the entry.", variant: "destructive" });
+            toast({ title: "Delete Error", description: "Could not delete the entry. See console for details.", variant: "destructive" });
         }
     }
   };
@@ -117,7 +145,10 @@ export default function ContentEntriesPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Entries for: {contentType.name}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight flex items-center">
+              <Blocks className="mr-3 h-6 w-6 text-primary" />
+              Entries for: {contentType.name}
+            </h1>
             <p className="text-sm text-muted-foreground">
               View, create, and manage entries for the "{contentType.name}" content type.
             </p>
@@ -151,25 +182,29 @@ export default function ContentEntriesPage() {
                       {displayFields.map(field => (
                         <TableHead key={field.apiIdentifier}>{field.name}</TableHead>
                       ))}
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {entries.map((entry) => (
                       <TableRow key={entry.id}>
                         {displayFields.map(field => (
-                          <TableCell key={`${entry.id}-${field.apiIdentifier}`}>
+                          <TableCell key={`${entry.id}-${field.apiIdentifier}`} className="max-w-xs truncate" title={entry[field.apiIdentifier]?.toString()}>
                             {field.apiIdentifier === 'updatedAt' && entry[field.apiIdentifier] 
-                              ? new Date(entry[field.apiIdentifier]).toLocaleDateString()
+                              ? new Date(entry[field.apiIdentifier]).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                              : field.type === 'Boolean'
+                              ? entry[field.apiIdentifier] ? 'Yes' : 'No'
                               : entry[field.apiIdentifier]?.toString() || '-'}
                           </TableCell>
                         ))}
-                        <TableCell>
-                          <Button variant="link" size="sm" className="p-0 h-auto" disabled>
-                            Edit
-                          </Button>
-                          <Button variant="link" size="sm" className="p-0 h-auto ml-2 text-destructive hover:text-destructive/80" onClick={() => handleDeleteEntry(entry.id)}>
-                            Delete
+                        <TableCell className="text-right">
+                           <Button variant="ghost" size="sm" className="mr-1" asChild>
+                            <Link href={`/admin/content/${contentTypeApiId}/${entry.id}/edit`}>
+                                <Edit className="h-4 w-4 mr-1" /> Edit
+                            </Link>
+                           </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/90" onClick={() => handleDeleteEntry(entry.id)}>
+                            <Trash2 className="h-4 w-4 mr-1" /> Delete
                           </Button>
                         </TableCell>
                       </TableRow>
