@@ -10,8 +10,8 @@ import {
   Share2, Mail, Send as SendIcon, Users2 as Users2Icon, Building, ListChecks,
   Spline, BarChartBig, LayoutTemplate as TemplateIcon, Edit3,
   ImageIcon as ImageIconLucide, LayoutDashboard, SlidersHorizontal, UserPlus, PlusCircle, MailPlus, CalendarDays, Smile,
-  FileCog, // For Content Types under Admin (will be removed if Content Types is removed)
-  Blocks, // For Content group (will be removed)
+  FileCog,
+  Blocks,
   Eye,
   ThumbsUp,
   UsersRound,
@@ -23,20 +23,13 @@ import {
   HardDrive,
   Mailbox,
   Cpu,
-  // KeyRound, // Not used
-  // ServerCog, // Not used
-  // Database, // Not used
-  // Cloud,    // Not used
-  // BoxIcon as Box, // Not used
-  // Server, // Not used
   RefreshCw,
   ExternalLink,
   Filter as FilterIcon,
-  // ListChecks as ListChecksIcon, // Duplicated, already imported as ListChecks
   Link2 as Link2IconLucide,
   Palette,
   Speaker,
-  Link as LinkIconLucide, // Alias to avoid conflict with next/link
+  Link as LinkIconLucide,
   Settings2,
   ShieldCheck,
   Paperclip,
@@ -58,8 +51,8 @@ import {
   TestTube2,
   ListPlus,
   MessageSquare,
-  // AlertTriangle, // Already imported
-  // Spline as SplineIcon, // Duplicated
+  BookOpen, // Added BookOpen
+  Plug,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -88,11 +81,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 import { ThemeToggleButton } from '@/components/common/theme-toggle-button';
-// Removed mock content type data import as it's being deleted
-// import { initialContentTypes as mockContentTypesForNav } from '@/lib/content-type-data';
-
 
 interface NavSubSubItem {
   href: string;
@@ -114,7 +104,7 @@ interface NavItemConfig {
   icon: ReactNode;
   subItems?: NavSubItem[];
   isGroup?: boolean;
-  id?: string; // Added id for easier management
+  id?: string;
 }
 
 export function MainLayout({ children, pageTitle }: { children: ReactNode; pageTitle: string }) {
@@ -179,7 +169,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
     },
     { id: 'ai_assistant', href: '/ai-assistant', label: 'AI Assistant', icon: <Lightbulb className="h-5 w-5" /> },
     { id: 'brand_profile', href: '/brand-profile', label: 'Brand Profile', icon: <Briefcase className="h-5 w-5" /> },
-    // Removed Content Group and its dynamic items
+    { id: 'campaign_guide', href: '/campaign-guide', label: 'Campaign Guide', icon: <BookOpen className="h-5 w-5" /> },
     {
       id: 'administration',
       label: 'Administration',
@@ -188,7 +178,6 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
       subItems: [
         { href: '/admin/settings', label: 'System Configuration', icon: <SlidersHorizontal className="h-4 w-4" /> },
         { href: '/admin/team-management', label: 'Team Management', icon: <Users className="h-4 w-4" /> },
-        // Removed Content Types link from Administration
       ]
     },
   ], []);
@@ -205,7 +194,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
     setOpenSecondLevelGroups(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  useEffect(() => {
+ useEffect(() => {
     const newOpenTopLevelGroups: Record<string, boolean> = {};
     const newOpenSecondLevelGroups: Record<string, boolean> = {};
 
@@ -263,7 +252,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                   }
                   return (sub.href && pathname === sub.href) || (sub.href && sub.href !== '/' && pathname.startsWith(sub.href + '/'));
                 });
-
+                
                 return (
                   <SidebarMenuItem key={item.id || item.label} className="relative">
                     <Tooltip>
@@ -293,7 +282,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                           </div>
                         </SidebarMenuButton>
                       </TooltipTrigger>
-                      <TooltipContent side="right" align="center" className="ml-2" hidden={sidebarState !== "collapsed" || isMobile}>
+                      <TooltipContent side="right" align="center" className="ml-2" hidden={sidebarState !== "collapsed" || isMobile || isCurrentItemGroupOpen}>
                         {item.label}
                       </TooltipContent>
                     </Tooltip>
@@ -303,7 +292,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                           if (subItem.isSubGroupHeader && subItem.subSubItems) {
                             const secondLevelKey = `${item.label}-${subItem.label}`;
                             const isCurrentSecondLevelGroupOpen = !!openSecondLevelGroups[secondLevelKey];
-                            const isSecondLevelGroupActiveBasedOnChildren = subItem.subSubItems.some(subSub =>
+                             const isSecondLevelGroupActiveBasedOnChildren = subItem.subSubItems.some(subSub =>
                               (subSub.href && pathname === subSub.href) ||
                               (subSub.href && subSub.href !== '/' && pathname.startsWith(subSub.href + '/'))
                             );
@@ -312,7 +301,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                               <SidebarMenuSubItem key={subItem.label} className="flex flex-col !pl-0">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <SidebarMenuButton
+                                     <SidebarMenuButton
                                       variant="default"
                                       size="sm"
                                       className={cn(
@@ -339,7 +328,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                                       </div>
                                     </SidebarMenuButton>
                                   </TooltipTrigger>
-                                  <TooltipContent side="right" align="center" className="ml-2" hidden={sidebarState !== "collapsed" || isMobile || isCurrentItemGroupOpen}>
+                                   <TooltipContent side="right" align="center" className="ml-2" hidden={sidebarState !== "collapsed" || isMobile || !isCurrentItemGroupOpen || isCurrentSecondLevelGroupOpen}>
                                     {subItem.label}
                                   </TooltipContent>
                                 </Tooltip>
@@ -352,7 +341,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                                         <SidebarMenuSubItem key={subSubItem.href || subSubItem.label}>
                                           <Tooltip>
                                             <TooltipTrigger asChild>
-                                              <Link href={subSubItem.href!} passHref legacyBehavior>
+                                              <Link href={subSubItem.href!} passHref legacyBehavior={false}>
                                                 <SidebarMenuSubButton
                                                   size="sm"
                                                   aria-current={isSubSubItemActive ? "page" : undefined}
@@ -365,7 +354,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                                                 </SidebarMenuSubButton>
                                               </Link>
                                             </TooltipTrigger>
-                                            <TooltipContent side="right" align="center" className="ml-2" hidden={sidebarState !== "collapsed" || isMobile || isCurrentSecondLevelGroupOpen}>
+                                             <TooltipContent side="right" align="center" className="ml-2" hidden={sidebarState !== "collapsed" || isMobile || !isCurrentSecondLevelGroupOpen}>
                                               {subSubItem.label}
                                             </TooltipContent>
                                           </Tooltip>
@@ -382,7 +371,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                             <SidebarMenuSubItem key={subItem.href || subItem.label}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Link href={subItem.href!} passHref legacyBehavior>
+                                  <Link href={subItem.href!} passHref legacyBehavior={false}>
                                     <SidebarMenuSubButton
                                       aria-current={isSubItemActive ? "page" : undefined}
                                       onClick={() => { if (isMobile) setOpenMobile(false); }}
@@ -394,7 +383,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                                     </SidebarMenuSubButton>
                                   </Link>
                                 </TooltipTrigger>
-                                <TooltipContent side="right" align="center" className="ml-2" hidden={sidebarState !== "collapsed" || isMobile || isCurrentItemGroupOpen}>
+                                 <TooltipContent side="right" align="center" className="ml-2" hidden={sidebarState !== "collapsed" || isMobile || !isCurrentItemGroupOpen}>
                                   {subItem.label}
                                 </TooltipContent>
                               </Tooltip>
@@ -416,7 +405,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                         className={cn(
                           sidebarMenuButtonVariants({ variant: 'default', size: 'default' }),
                           "w-full justify-start gap-3",
-                          isTopLevelLinkActive && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
+                           isTopLevelLinkActive && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
                         )}
                         aria-current={isTopLevelLinkActive ? "page" : undefined}
                         onClick={() => {
@@ -483,7 +472,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
             <SidebarTrigger
               variant="outline"
               size="icon"
-              className="md:hidden h-9 w-9" // Ensure size consistency
+              className="md:hidden h-9 w-9"
               aria-label="Toggle sidebar"
             >
               <PanelLeft className="h-5 w-5" />
