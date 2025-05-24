@@ -106,7 +106,7 @@ export default function CampaignGuidePage() {
               <ul className="list-disc pl-5 space-y-1">
                 <li>Keep it short, clear, and compelling (ideally under 50 characters).</li>
                 <li>Create curiosity or urgency (e.g., "Last Chance!", "You're Invited!").</li>
-                <li>Use personalization (e.g., `{{firstName}}`).</li>
+                <li>Use personalization (e.g., <code className="font-mono text-sm bg-muted px-1 py-0.5 rounded">{'{'}{'{firstName}}'}</code>).</li>
                 <li>Emojis can increase open rates if used appropriately and relevantly for your brand.</li>
                 <li>A/B test different subject lines.</li>
                 <li>Avoid spammy words (FREE, SALE, WIN, GUARANTEE in all caps).</li>
@@ -186,6 +186,7 @@ export default function CampaignGuidePage() {
               <li><span className="font-medium">Preview Across Clients/Devices:</span> Use tools (like Litmus, Email on Acid, or built-in previews) to see how your email renders in major email clients (Gmail, Outlook, Apple Mail) and on different devices.</li>
               <li><span className="font-medium">Send Test Emails:</span> Always send a test email to yourself and colleagues to check for errors, broken links, and rendering issues before sending to your main list.</li>
               <li><span className="font-medium">Link Checking:</span> Ensure all links in your email are correct and working.</li>
+              <li><span className="font-medium">Personalization Preview:</span> Test how personalized fields will appear with different subscriber data.</li>
             </ul>
           </CardContent>
         </Card>
@@ -242,3 +243,5 @@ export default function CampaignGuidePage() {
     </MainLayout>
   );
 }
+
+    
