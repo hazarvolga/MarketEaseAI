@@ -1,0 +1,28 @@
+# Derleme (Build) ve Bağımlılık Klasörleri
+node_modules/
+build/
+dist/
+.next/           # Next.js uygulamaları için derlenmiş çıktılar
+.cache/          # Çeşitli önbellek dosyaları
+
+# Versiyon Kontrolü ve Geliştirme Ortamı Ayarları
+.git/
+.vscode/
+.idx/            # Firebase Studio'nun kendi internal dosyaları (muhtemelen sizin bulduğunuz .idx/ai/ klasörü burada)
+.idea/           # JetBrains IDE'leri (IntelliJ, WebStorm vb.) için ayarlar
+
+# Test ve Kapsam Raporları
+test/
+tests/
+coverage/
+
+# Public (Genel) Klasörler (dikkatli olun - yalnızca AI'ya gönderilmesi gerekmeyen büyük dosyalar varsa)
+# Eğer public klasörünüzde AI'nın anlaması gereken önemli HTML/CSS/JS dosyaları veya
+# AI'nın referans alması gereken küçük resimler varsa bu satırı silin.
+# Ancak, çok büyük resim, video veya diğer medya dosyaları varsa eklemekte fayda var.
+public/
+
+# Sık kullanılan geçici veya log dosyaları (genellikle projenizin kök dizininde olmaz ama yine de ekleyelim)
+*.log
+*.tmp
+*.temp
