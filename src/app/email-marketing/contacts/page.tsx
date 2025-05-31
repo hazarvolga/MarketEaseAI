@@ -4,20 +4,13 @@
 import { MainLayout } from '@/components/layout/main-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, UploadCloud, ListFilter, Search, Users, MailCheck } from 'lucide-react'; // Added MailCheck
+import { PlusCircle, UploadCloud, ListFilter, Search, Users, MailCheck } from 'lucide-react'; 
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from "@/hooks/use-toast"; // Added useToast
-import React from 'react'; // Added React for useState and useTransition
-
-// Mock data for contacts
-const contactsMock = [
-  { id: '1', name: 'John Doe', email: 'john.doe@example.com', lists: ['Newsletter Subscribers', 'Potential Leads'], dateAdded: '2023-10-01', company: 'Innovatech Solutions' },
-  { id: '2', name: 'Alice Smith', email: 'alice.smith@example.com', lists: ['Newsletter Subscribers'], dateAdded: '2023-09-15', company: 'ArchStruct Inc.' },
-  { id: '3', name: 'Robert Johnson', email: 'robert.j@example.com', lists: ['VIP Clients'], dateAdded: '2023-08-20', company: 'DesignPro Ltd.' },
-  { id: '4', name: 'Emily White', email: 'emily.white@example.com', lists: ['Newsletter Subscribers', 'Event Attendees'], dateAdded: '2023-10-05', company: 'BuildWell Group' },
-];
+import { useToast } from "@/hooks/use-toast"; 
+import React from 'react'; 
+import { contactsMock } from '@/lib/contact-data'; // Import from new location
 
 export default function ContactsPage() {
   const { toast } = useToast();
@@ -36,7 +29,7 @@ export default function ContactsPage() {
     const randomResult = Math.random();
     let resultTitle = "";
     let resultDescription = "";
-    let variant: "default" | "destructive" = "default"; // Removed "success" for now
+    let variant: "default" | "destructive" = "default";
 
     if (randomResult < 0.7) { // 70% chance of passing
       resultTitle = "Spam Testi Başarılı";
@@ -59,7 +52,7 @@ export default function ContactsPage() {
       title: resultTitle,
       description: resultDescription,
       variant: variant,
-      duration: 7000, // Increased duration for better readability of results
+      duration: 7000,
     });
     setIsTestingSpam(prev => ({ ...prev, [contactId]: false }));
   };
@@ -169,5 +162,3 @@ export default function ContactsPage() {
     </MainLayout>
   );
 }
-
-    
