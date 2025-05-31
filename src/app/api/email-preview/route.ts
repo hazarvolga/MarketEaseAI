@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { render } from 'react-email';
-import { GenericBrandEmail, type BrandData, type EmailContent } from '@/emails/GenericBrandEmail';
+// import { render } from 'react-email';
+// import { GenericBrandEmail, type BrandData, type EmailContent } from '@/emails/GenericBrandEmail';
 import { mockTemplates, type EmailTemplate } from '@/lib/email-template-data';
 
 // Helper to get contrast color (copied from GenericBrandEmail for now, ideally from a shared util)
@@ -23,7 +23,7 @@ const getContrastYIQ = (hexcolor: string): 'black' | 'white' => {
 
 
 // Mock brand data for the preview - this would typically come from a global state or backend
-const mockBrand: BrandData = {
+const mockBrand = {
   companyName: 'MarketMaestro Demo',
   logoPlaceholderText: 'MarketMaestro',
   // logoUrl: '/path/to/your/logo.png', // Optional: Add if you have a logo URL
@@ -43,7 +43,7 @@ const mockBrand: BrandData = {
 
 // Function to generate mock email content based on template category
 // (Simplified version of the one in create campaign page)
-function generateMockEmailPreviewContent(templateCategory: string, brand: BrandData): EmailContent {
+function generateMockEmailPreviewContent(templateCategory: string, brand: typeof mockBrand): any { // Changed EmailContent to any
   const { companyName, websiteUrl } = brand;
   let subject = `A Special Update from ${companyName}`;
   let preheader = `Don't miss out on our latest news!`;
@@ -97,28 +97,54 @@ export async function GET(request: NextRequest) {
     return new NextResponse(`Template with ID ${templateId} not found`, { status: 404 });
   }
 
-  const emailContent = generateMockEmailPreviewContent(template.category, mockBrand);
+  // const emailContent = generateMockEmailPreviewContent(template.category, mockBrand);
   
   try {
-    const emailHtml = render(
-      GenericBrandEmail({
-        brandData: mockBrand,
-        emailContent: emailContent,
-        templateCategory: template.category,
-      })
-    );
-    return new NextResponse(emailHtml, {
+    // Commented out react-email rendering
+    // const emailHtml = render(
+    //   GenericBrandEmail({
+    //     brandData: mockBrand,
+    //     emailContent: emailContent,
+    //     templateCategory: template.category,
+    //   })
+    // );
+    const placeholderHtml = `
+      <html>
+        <head>
+          <title>Email Preview: ${template.name}</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+            .container { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 600px; }
+            h1 { color: #333; }
+            p { color: #555; line-height: 1.6; }
+            .note { font-size: 0.9em; color: #777; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;}
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>${template.name}</h1>
+            <p><strong>Category:</strong> ${template.category}</p>
+            <p>${template.description}</p>
+            <hr style="margin: 20px 0; border-color: #eee;" />
+            <p class="note"><strong>Note:</strong> Full HTML email rendering with react-email is temporarily unavailable due to a module resolution issue. This is a basic metadata preview.</p>
+          </div>
+        </body>
+      </html>
+    `;
+    return new NextResponse(placeholderHtml, {
       status: 200,
       headers: {
         'Content-Type': 'text/html',
       },
     });
   } catch (error) {
-    console.error('Error rendering email template:', error);
-    let errorMessage = 'Failed to render email template.';
+    console.error('Error in API route (email-preview):', error);
+    let errorMessage = 'Failed to process email preview request.';
     if (error instanceof Error) {
         errorMessage += ` Details: ${error.message}`;
     }
-    return new NextResponse(errorMessage, { status: 500 });
+    // Ensure this error message is plain text or simple HTML, not the full Next.js error page HTML
+    const errorHtml = `<html><body><h1>Error</h1><p>${errorMessage}</p></body></html>`;
+    return new NextResponse(errorHtml, { status: 500, headers: { 'Content-Type': 'text/html' } });
   }
 }
