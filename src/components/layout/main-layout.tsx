@@ -343,6 +343,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                                             <TooltipTrigger asChild>
                                               <Link href={subSubItem.href!} passHref legacyBehavior={false}>
                                                 <SidebarMenuSubButton
+                                                  asChild={true}
                                                   size="sm"
                                                   aria-current={isSubSubItemActive ? "page" : undefined}
                                                   onClick={() => { if (isMobile) setOpenMobile(false); }}
@@ -373,6 +374,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
                                 <TooltipTrigger asChild>
                                   <Link href={subItem.href!} passHref legacyBehavior={false}>
                                     <SidebarMenuSubButton
+                                      asChild={true}
                                       aria-current={isSubItemActive ? "page" : undefined}
                                       onClick={() => { if (isMobile) setOpenMobile(false); }}
                                     >
@@ -514,3 +516,5 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
     </div>
   );
 }
+
+    
