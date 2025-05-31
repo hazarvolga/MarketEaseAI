@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { mockTemplates, type EmailTemplate } from '@/lib/email-template-data';
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+import Image from 'next/image'; // Keep for thumbnail if needed
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function TemplatePreviewPage() {
@@ -22,9 +22,8 @@ export default function TemplatePreviewPage() {
   const [emailHtml, setEmailHtml] = useState<string | null>(null);
   const [htmlRenderingError, setHtmlRenderingError] = useState<string | null>(null);
 
-
   useEffect(() => {
-    async function fetchTemplateAndRender() {
+    async function fetchTemplatePreview() {
       setIsLoading(true);
       setHtmlRenderingError(null);
       setEmailHtml(null);
@@ -43,19 +42,19 @@ export default function TemplatePreviewPage() {
           const response = await fetch(`/api/email-preview?templateId=${templateId}`);
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Failed to fetch email HTML: ${response.status} ${errorText}`);
+            throw new Error(`Failed to fetch email HTML preview: ${response.status} ${errorText}`);
           }
           const html = await response.text();
           setEmailHtml(html);
         } catch (error) {
-          console.error("Error fetching or rendering email HTML:", error);
+          console.error("Error fetching email HTML preview:", error);
           setHtmlRenderingError(error instanceof Error ? error.message : String(error));
         }
       }
       setIsLoading(false);
     }
 
-    fetchTemplateAndRender();
+    fetchTemplatePreview();
   }, [templateId]);
 
   const handleUseThisTemplate = () => {
@@ -126,7 +125,7 @@ export default function TemplatePreviewPage() {
             <Button 
               variant="outline" 
               onClick={() => window.open(`/api/email-preview?templateId=${template.id}`, '_blank')}
-              disabled={!emailHtml || !!htmlRenderingError}
+              disabled={!emailHtml || !!htmlRenderingError || isLoading}
             >
               <ExternalLink className="mr-2 h-4 w-4" /> Open HTML in New Tab
             </Button>
@@ -150,7 +149,7 @@ export default function TemplatePreviewPage() {
                 <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Error Rendering Preview</AlertTitle>
-                    <AlertDescription>{htmlRenderingError}</AlertDescription>
+                    <AlertDescription>{htmlRenderingError}. The API might be returning an error page instead of HTML.</AlertDescription>
                 </Alert>
             )}
             {isLoading && !emailHtml && !htmlRenderingError && (
@@ -164,13 +163,13 @@ export default function TemplatePreviewPage() {
                 srcDoc={emailHtml}
                 title={`${template.name} Preview`}
                 className="w-full h-[600px] border rounded-md bg-white"
-                sandbox="allow-same-origin" // Restrict iframe capabilities for security
+                sandbox="allow-scripts allow-same-origin" // Allow scripts if your generated HTML needs them; allow-same-origin for local resources
               />
             )}
              {!isLoading && !emailHtml && !htmlRenderingError && (
                  <div className="w-full min-h-[400px] bg-muted rounded-md flex items-center justify-center">
                     <AlertTriangle className="h-8 w-8 text-muted-foreground" />
-                    <p className="ml-2 text-muted-foreground">Could not load HTML preview.</p>
+                    <p className="ml-2 text-muted-foreground">Could not load HTML preview. The API might have returned an error.</p>
                 </div>
             )}
             <Alert variant="default" className="mt-4 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
