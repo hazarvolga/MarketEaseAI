@@ -4,21 +4,22 @@
 import { MainLayout } from '@/components/layout/main-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Edit, Loader2, AlertTriangle, Eye, Facebook, Instagram, Linkedin as LinkedinIcon, Twitter as TwitterIconLucide, Youtube } from 'lucide-react'; 
+import { ArrowLeft, Edit, Loader2, AlertTriangle, Eye } from 'lucide-react'; 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { mockTemplates, type EmailTemplate } from '@/lib/email-template-data';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-// import { render } from 'react-email'; // Assuming react-email is installed - Temporarily commented out
-// import { GenericBrandEmail } from '@/emails/GenericBrandEmail'; // Temporarily commented out
+import { render } from 'react-email';
+import { GenericBrandEmail } from '@/emails/GenericBrandEmail';
 
 // Mock brand data - this would typically come from a global state or backend
 const mockBrand = {
   companyName: "ArchStruct Design Suite",
   logoPlaceholderText: "ArchStruct",
+  logoUrl: "https://placehold.co/150x50/007BFF/FFFFFF?text=ArchStruct", // Added a placeholder logo URL
   address: "123 Innovation Drive, Tech City, CA 90210, USA",
   websiteUrl: "https://www.archstructsuite.com",
   primaryColor: "#007BFF", // Example: A vibrant blue
@@ -44,11 +45,14 @@ interface EmailTextContent {
 }
 
 function generateMockEmailContent(templateCategory: string, brand: typeof mockBrand): EmailTextContent {
-  const { companyName, product = "our innovative solutions", targetAudience = "valued members" } = { product: "ArchModeler Pro", ...brand }; // Example product
+  const { companyName } = brand;
+  const product = "our innovative solutions"; // Simplified for this example
+  const targetAudience = "valued members"; // Simplified
+
   let subject = `An Update from ${companyName}`;
   let preheader = `News for ${targetAudience}.`;
-  let greeting = `Hi there,`; // Generic greeting
-  let body = `This is a general update regarding ${product}.\n\nWe aim to empower professionals like you.`;
+  let greeting = `Hi there,`;
+  let body = `This is a general update regarding ${product}.\n\nWe aim to empower professionals like you with our cutting-edge tools and resources.\n\nExplore our latest offerings and see how we can help you achieve more.`;
   let ctaText = 'Learn More';
   let offer;
 
@@ -57,18 +61,24 @@ function generateMockEmailContent(templateCategory: string, brand: typeof mockBr
       subject = `Welcome to ${companyName}!`;
       preheader = `Get started with ${product}.`;
       greeting = `Welcome, New Member!`;
-      body = `We're thrilled to have you! Explore how ${product} helps professionals like you achieve more.\n\nHere are some next steps:\n- Explore your dashboard\n- Check out our tutorials`;
+      body = `We're thrilled to have you! Explore how ${product} helps professionals like you achieve more.\n\nHere are some next steps:\n- Explore your dashboard\n- Check out our tutorials\n- Join our community forum`;
       ctaText = 'Get Started';
       break;
     case 'promotion':
     case 'sales':
       subject = `Special Offer on ${product}!`;
       preheader = `Exclusive discounts for ${targetAudience}.`;
-      body = `Don't miss our limited-time offer on ${product}. Enhance your workflow today and save big!`;
+      body = `Don't miss our limited-time offer on ${product}. Enhance your workflow today and save big! We're committed to providing you with the best tools.`;
       offer = "Get 25% OFF - Use code SAVE25";
       ctaText = 'Claim Discount Now';
       break;
-    // ... other cases would be here for more dynamic mock content based on category
+    case 'newsletter':
+      subject = `${companyName} Monthly Insights`;
+      preheader = `Latest news, tips, and updates.`;
+      greeting = `Hello,`;
+      body = `Here's your monthly update from ${companyName}, covering new features in ${product}, industry news for ${targetAudience}, and helpful tips to maximize your success.`;
+      ctaText = 'Read Newsletter';
+      break;
     default:
       // Keep generic content
       break;
@@ -84,30 +94,36 @@ export default function TemplatePreviewPage() {
 
   const [template, setTemplate] = useState<EmailTemplate | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
-  // const [emailHtml, setEmailHtml] = useState<string | null>(null); // Temporarily commented out
+  const [emailHtml, setEmailHtml] = useState<string | null>(null);
+  const [renderingError, setRenderingError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
-    // setEmailHtml(null); // Temporarily commented out
+    setEmailHtml(null);
+    setRenderingError(null);
+
     if (templateId) {
       const foundTemplate = mockTemplates.find(t => t.id === templateId);
       setTemplate(foundTemplate || null);
       if (foundTemplate) {
-        // const emailTextContent = generateMockEmailContent(foundTemplate.category, mockBrand);
-        // Try-catch block for rendering, as react-email might have issues in some environments
-        // try {
-        //   const renderedHtml = render(
-        //     <GenericBrandEmail 
-        //       brandData={mockBrand} 
-        //       emailContent={emailTextContent} 
-        //       templateCategory={foundTemplate.category} 
-        //     />
-        //   );
-        //   setEmailHtml(renderedHtml);
-        // } catch (error) {
-        //   console.error("Error rendering email with react-email:", error);
-        //   setEmailHtml("<p>Error rendering email preview. Check console.</p>");
-        // }
+        const emailTextContent = generateMockEmailContent(foundTemplate.category, mockBrand);
+        try {
+          const renderedHtml = render(
+            <GenericBrandEmail 
+              brandData={mockBrand} 
+              emailContent={emailTextContent} 
+              templateCategory={foundTemplate.category} 
+            />
+          );
+          setEmailHtml(renderedHtml);
+        } catch (error) {
+          console.error("Error rendering email with react-email:", error);
+          let message = "Error rendering email preview.";
+          if (error instanceof Error) {
+            message += ` Details: ${error.message}`;
+          }
+          setRenderingError(message);
+        }
       }
     } else {
       setTemplate(null);
@@ -159,7 +175,6 @@ export default function TemplatePreviewPage() {
     );
   }
   
-  // Simplified preview showing metadata
   return (
     <MainLayout pageTitle={`Preview: ${template.name}`}>
       <div className="space-y-6">
@@ -189,27 +204,40 @@ export default function TemplatePreviewPage() {
 
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-xl">Template Thumbnail</CardTitle>
+            <CardTitle className="text-xl flex items-center">
+              <Eye className="mr-2 h-5 w-5 text-primary" /> Email Preview
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="aspect-[4/3] w-full max-w-xl mx-auto bg-muted rounded-md flex items-center justify-center relative overflow-hidden">
-              <Image
-                src={template.thumbnailUrl}
-                alt={`${template.name} thumbnail`}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                style={{ objectFit: 'contain' }} 
-                data-ai-hint={template.dataAiHint || 'email template design'}
-              />
-            </div>
-            <Separator />
-            <Alert variant="default" className="mt-4 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
-                <AlertTriangle className="h-4 w-4 text-blue-500" />
-                <AlertTitle className="text-blue-700 dark:text-blue-300">Preview Note</AlertTitle>
-                <AlertDescription className="text-blue-600 dark:text-blue-400">
-                    This is a basic preview showing template metadata. Full HTML email rendering using react-email will be re-integrated once dependency issues are resolved.
-                </AlertDescription>
-            </Alert>
+            {renderingError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Rendering Error</AlertTitle>
+                <AlertDescription>{renderingError}</AlertDescription>
+              </Alert>
+            )}
+            {emailHtml && !renderingError && (
+              <div 
+                className="border rounded-md shadow-inner p-2 bg-white mx-auto max-w-3xl overflow-x-auto"
+                style={{ minHeight: '400px' }} // Ensure some height for the preview container
+              >
+                <iframe 
+                  srcDoc={emailHtml}
+                  title="Email Preview"
+                  className="w-full h-[600px] border-0" // Adjust height as needed
+                  sandbox="allow-same-origin" // Basic sandboxing
+                />
+              </div>
+            )}
+            {!emailHtml && !renderingError && !isLoading && (
+                 <Alert variant="default" className="mt-4 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
+                    <AlertTriangle className="h-4 w-4 text-blue-500" />
+                    <AlertTitle className="text-blue-700 dark:text-blue-300">Preview Note</AlertTitle>
+                    <AlertDescription className="text-blue-600 dark:text-blue-400">
+                        Email content could not be loaded or rendered.
+                    </AlertDescription>
+                </Alert>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,8 +1,4 @@
 
-// This file's content is temporarily commented out/removed to resolve 'react-email' module not found issues.
-// It will be restored or replaced with a custom email component solution later.
-
-/*
 import {
   Body,
   Button,
@@ -212,7 +208,7 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
     
     const accentColorHex = brandData.accentColor.replace('#','');
     const heroTextColor = getContrastYIQ(brandData.accentColor) === 'white' ? 'FFFFFF' : '000000';
-    heroImageSrc = `https://placehold.co/540x200/${accentColorHex}/${heroTextColor}?text=${encodeURIComponent(heroText)}`;
+    heroImageSrc = `https://placehold.co/540x200.png`; // Using a generic placeholder for now
     heroAltText = `${heroText} Banner`;
   }
 
@@ -248,7 +244,7 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
             
             {heroImageSrc && (
                  <Section style={{ textAlign: 'center' as const, margin: '20px 0' }}>
-                    <Img src={heroImageSrc} alt={heroAltText} width="100%" style={{ borderRadius: '4px', maxWidth: '100%', height: 'auto' }} />
+                    <Img src={heroImageSrc} alt={heroAltText} width="100%" style={{ borderRadius: '4px', maxWidth: '100%', height: 'auto' }} data-ai-hint="email hero banner"/>
                 </Section>
             )}
             
@@ -315,8 +311,5 @@ export const GenericBrandEmail: React.FC<Readonly<GenericBrandEmailProps>> = ({
   );
 };
 
-// export default GenericBrandEmail; // Default export might cause issues if not handled correctly by Next.js build for this specific file usage
-*/
-export {} // Add an empty export to make this a module if all content is commented out
-
+export default GenericBrandEmail;
     
