@@ -37,10 +37,11 @@ const CampaignToneSchema = z.enum([
 export type CampaignTone = z.infer<typeof CampaignToneSchema>; // Exporting the type is fine
 
 const GenerateCampaignElementsInputSchema = z.object({
-  campaignGoal: CampaignGoalSchema, // Use the internal schema
+  campaignGoal: CampaignGoalSchema, 
+  customCampaignGoalText: z.string().optional().describe("A user-defined custom goal for the campaign, used if campaignGoal is 'other'."),
   keyMessageOrOffer: z.string().min(10, "Key message or offer must be at least 10 characters.").max(500, "Key message or offer cannot exceed 500 characters.").describe("The core message, product, or offer for this campaign."),
   targetAudienceDescription: z.string().optional().describe("Specific target audience for this campaign. If blank, Brand Profile audience will be primary."),
-  desiredTone: CampaignToneSchema.optional(), // Use the internal schema
+  desiredTone: CampaignToneSchema.optional(), 
   
   brandProfile: z.object({
     brandName: z.string().describe("The official name of the brand."),
@@ -85,7 +86,7 @@ Your task is to generate key elements for an email campaign based on the provide
 {{#if brandProfile.uniqueSellingPropositions}}- USPs: {{brandProfile.uniqueSellingPropositions}}{{/if}}
 
 **User Input for This Specific Campaign:**
-- Campaign Goal: {{campaignGoal}} (Translate this goal into actionable marketing terms)
+- Campaign Objective: {{#if (eq campaignGoal "other")}}{{#if customCampaignGoalText}}Custom: {{{customCampaignGoalText}}}{{else}}Other (details in Key Message/Offer){{/if}}{{else}}{{campaignGoal}} (Translate this goal into actionable marketing terms){{/if}}
 - Key Message/Offer for this campaign: {{{keyMessageOrOffer}}}
 {{#if targetAudienceDescription}}- Specific Target Audience for this campaign: {{{targetAudienceDescription}}}{{else}}- (Use general brand target audience for this campaign.){{/if}}
 {{#if desiredTone}}- Desired Tone for this campaign: {{desiredTone}}{{else}}- (Use general brand voice for this campaign.)"{{/if}}
@@ -123,7 +124,3 @@ const generateCampaignElementsFlow = ai.defineFlow(
     };
   }
 );
-
-// Exporting types derived from schemas (already done for input/output)
-// export type CampaignGoal = z.infer<typeof CampaignGoalSchema>; // Already exported at top
-// export type CampaignTone = z.infer<typeof CampaignToneSchema>; // Already exported at top

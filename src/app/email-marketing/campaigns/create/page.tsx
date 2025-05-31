@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/command";
 import { 
   CalendarIcon, 
-  ChevronDown, 
   AlertCircle, 
   Info, 
   Eye, 
@@ -89,6 +88,8 @@ const CampaignGoalEnum = {
   RE_ENGAGEMENT: "re_engagement",
   OTHER: "other",
 } as const;
+type CampaignGoalEnumValues = typeof CampaignGoalEnum[keyof typeof CampaignGoalEnum];
+
 
 const CampaignToneEnum = {
   PROFESSIONAL: "professional",
@@ -99,6 +100,7 @@ const CampaignToneEnum = {
   EMPATHETIC: "empathetic",
   INSPIRATIONAL: "inspirational",
 } as const;
+type CampaignToneEnumValues = typeof CampaignToneEnum[keyof typeof CampaignToneEnum];
 
 
 interface MockRecipientGroup {
@@ -183,13 +185,22 @@ type ScheduleOption = "immediate" | "later";
 type PreviewDevice = "desktop" | "mobile";
 
 
-// AI Assistant Modal Form Schema - uses the types imported from the flow
 const aiAssistantFormSchema = z.object({
-  campaignGoal: z.nativeEnum(CampaignGoalEnum), // Use nativeEnum with the manually defined enum
+  campaignGoal: z.nativeEnum(CampaignGoalEnum),
+  customCampaignGoal: z.string().optional(),
   keyMessageOrOffer: z.string().min(10, "Must be at least 10 characters").max(500, "Cannot exceed 500 characters"),
   targetAudienceDescription: z.string().max(300, "Cannot exceed 300 characters").optional(),
-  desiredTone: z.nativeEnum(CampaignToneEnum).optional(), // Use nativeEnum with the manually defined enum
+  desiredTone: z.nativeEnum(CampaignToneEnum).optional(),
+}).refine(data => {
+  if (data.campaignGoal === CampaignGoalEnum.OTHER) {
+    return data.customCampaignGoal && data.customCampaignGoal.trim().length >= 10;
+  }
+  return true;
+}, {
+  message: "Custom campaign goal must be at least 10 characters if 'Other' is selected.",
+  path: ["customCampaignGoal"], 
 });
+
 type AiAssistantFormValues = z.infer<typeof aiAssistantFormSchema>;
 
 
@@ -257,11 +268,13 @@ function CreateCampaignFormComponent() {
     resolver: zodResolver(aiAssistantFormSchema),
     defaultValues: {
       campaignGoal: CampaignGoalEnum.NEW_PRODUCT_FEATURE,
+      customCampaignGoal: "",
       keyMessageOrOffer: "",
       targetAudienceDescription: "",
       desiredTone: CampaignToneEnum.PROFESSIONAL,
     },
   });
+  const watchedCampaignGoal = aiForm.watch("campaignGoal");
 
 
   useEffect(() => {
@@ -300,9 +313,6 @@ function CreateCampaignFormComponent() {
     setSelectedTemplateId(null);
     setSelectedTemplateName(null);
     setEmailContent('');
-    // Optionally clear subject and preview if they were purely from template
-    // setSubjectLine(''); 
-    // setPreviewText('');
     toast({ title: "Template Cleared" });
   };
 
@@ -393,8 +403,12 @@ function CreateCampaignFormComponent() {
 
     startAiTransition(async () => {
       const payload: GenerateCampaignElementsInput = {
-        ...values,
-        brandProfile: mockBrandProfileForAI, 
+        campaignGoal: values.campaignGoal as CampaignGoal, // Cast to CampaignGoal type
+        keyMessageOrOffer: values.keyMessageOrOffer,
+        targetAudienceDescription: values.targetAudienceDescription,
+        desiredTone: values.desiredTone as CampaignTone | undefined, // Cast to CampaignTone type
+        brandProfile: mockBrandProfileForAI,
+        customCampaignGoalText: values.campaignGoal === CampaignGoalEnum.OTHER ? values.customCampaignGoal : undefined,
       };
       const result = await handleGenerateCampaignElementsAction(payload);
       if (result.success && result.data) {
@@ -515,6 +529,19 @@ function CreateCampaignFormComponent() {
                                         />
                                         {aiForm.formState.errors.campaignGoal && <p className="text-xs text-destructive">{aiForm.formState.errors.campaignGoal.message}</p>}
                                       </div>
+                                      
+                                      {watchedCampaignGoal === CampaignGoalEnum.OTHER && (
+                                        <div className="space-y-2 animate-in fade-in-50">
+                                          <Label htmlFor="aiCustomCampaignGoal">Custom Campaign Goal</Label>
+                                          <Textarea 
+                                            id="aiCustomCampaignGoal" 
+                                            {...aiForm.register("customCampaignGoal")} 
+                                            placeholder="Describe your unique campaign goal..." 
+                                            rows={2} 
+                                          />
+                                          {aiForm.formState.errors.customCampaignGoal && <p className="text-xs text-destructive">{aiForm.formState.errors.customCampaignGoal.message}</p>}
+                                        </div>
+                                      )}
 
                                       <div className="space-y-2">
                                         <Label htmlFor="aiKeyMessage">Key Message / Offer</Label>
