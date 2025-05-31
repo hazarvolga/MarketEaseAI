@@ -4,7 +4,7 @@
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Lightbulb, ListChecks, Target, PenTool, Users, Palette, ShieldCheck, CheckCircle, BookOpen, AlertTriangle } from 'lucide-react';
+import { Lightbulb, ListChecks, Target, PenTool, Users, Palette, ShieldCheck, CheckCircle, BookOpen, AlertTriangle, Code, TestTube2 as TestTubeIcon } from 'lucide-react';
 
 export default function CampaignGuidePage() {
   return (
@@ -164,7 +164,24 @@ export default function CampaignGuidePage() {
               <li><span className="font-medium">Whitespace:</span> Use generously to improve readability and reduce clutter.</li>
               <li><span className="font-medium">Font Choice:</span> Use web-safe fonts or well-supported system fonts (e.g., Arial, Helvetica, Verdana, Georgia, Times New Roman). Aim for 14-16px for body text.</li>
             </ul>
-            <h4 className="font-semibold text-md mt-3">Deliverability & Avoiding Spam Filters:</h4>
+            
+            <Separator className="my-4" />
+            <h4 className="font-semibold text-md flex items-center"><Code className="mr-2 h-5 w-5 text-gray-600 dark:text-gray-400"/>Writing Email-Safe HTML & CSS:</h4>
+            <p className="text-sm text-muted-foreground">
+              Email clients have varying levels of HTML/CSS support. To maximize compatibility:
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><span className="font-medium">Table-Based Layouts:</span> For complex structures, HTML tables (`<table>`, `<tr>`, `<td>`) are often more reliable than modern CSS layouts like Flexbox or Grid.</li>
+              <li><span className="font-medium">Inline CSS:</span> Embed most of your CSS styles directly into HTML tags using the `style` attribute (e.g., `<p style="color: #333; font-size: 14px;">`). Avoid relying heavily on `<style>` blocks in the `<head>` or external stylesheets.</li>
+              <li><span className="font-medium">Simplify HTML:</span> Use semantic HTML where possible, but prioritize simplicity and broad compatibility. Avoid overly nested elements.</li>
+              <li><span className="font-medium">Supported CSS:</span> Stick to CSS properties widely supported by email clients. Resources like "Can I email..." (caniemail.com) can be helpful.</li>
+              <li><span className="font-medium">Media Queries for Responsiveness:</span> Use `@media` queries within a `<style>` block in the `<head>` for responsive adjustments (e.g., single-column layout on mobile). Some clients might ignore these, so ensure the base layout is usable.</li>
+              <li><span className="font-medium">ALT Text for Images:</span> Always use descriptive `alt` attributes for `<img>` tags.</li>
+              <li><span className="font-medium">Avoid JavaScript and Complex Scripts:</span> These are generally not supported and can trigger spam filters.</li>
+            </ul>
+
+            <Separator className="my-4" />
+            <h4 className="font-semibold text-md">Deliverability & Avoiding Spam Filters:</h4>
             <ul className="list-disc pl-5 space-y-1">
               <li><span className="font-medium">Sender Authentication:</span> Set up SPF, DKIM, and DMARC records for your sending domain to prove your emails are legitimate.</li>
               <li><span className="font-medium">Content Quality:</span> Avoid spammy phrases, excessive capitalization, too many exclamation points, and misleading subject lines.</li>
@@ -183,10 +200,16 @@ export default function CampaignGuidePage() {
           <CardContent className="space-y-3 text-sm">
             <ul className="list-disc pl-5 space-y-1">
               <li><span className="font-medium">A/B Testing:</span> Test different subject lines, preheaders, CTAs, content, images, and send times to see what resonates best with your audience.</li>
-              <li><span className="font-medium">Preview Across Clients/Devices:</span> Use tools (like Litmus, Email on Acid, or built-in previews) to see how your email renders in major email clients (Gmail, Outlook, Apple Mail) and on different devices.</li>
+              <li><span className="font-medium">Preview Across Clients/Devices:</span> Use tools (like Litmus, Email on Acid, or built-in previews in some Email Service Providers) to see how your email renders in major email clients (Gmail, Outlook, Apple Mail) and on different devices.</li>
               <li><span className="font-medium">Send Test Emails:</span> Always send a test email to yourself and colleagues to check for errors, broken links, and rendering issues before sending to your main list.</li>
               <li><span className="font-medium">Link Checking:</span> Ensure all links in your email are correct and working.</li>
               <li><span className="font-medium">Personalization Preview:</span> Test how personalized fields will appear with different subscriber data.</li>
+            </ul>
+             <p className="mt-3 font-semibold">Recommended Testing Tools:</p>
+             <ul className="list-disc pl-5 space-y-1">
+                <li>Litmus: Comprehensive email testing and analytics.</li>
+                <li>Email on Acid: Another popular platform for testing email rendering.</li>
+                <li>Manual Testing: Sending test emails to various free accounts (Gmail, Outlook.com, Yahoo) on different devices.</li>
             </ul>
           </CardContent>
         </Card>
@@ -243,5 +266,7 @@ export default function CampaignGuidePage() {
     </MainLayout>
   );
 }
+
+    
 
     

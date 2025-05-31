@@ -60,8 +60,8 @@ import {
   Settings, 
   Send, 
   FileText,
-  Check, // Added for CommandItem selection indication
-  Search // Added for search input
+  Check, 
+  Search 
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -74,7 +74,7 @@ interface MockRecipientGroup {
   id: string;
   name: string;
   type: 'list' | 'segment';
-  count: number; // Added count
+  count: number; 
 }
 
 const mockRecipientGroups: MockRecipientGroup[] = [
@@ -498,6 +498,21 @@ function CreateCampaignFormComponent() {
                       onChange={(e) => setEmailContent(e.target.value)}
                       className={cn("transition-all duration-300 ease-in-out", currentPreviewDevice === 'mobile' ? 'max-w-xs mx-auto shadow-md border-2 border-dashed p-2' : 'w-full')}
                     />
+                    <Alert variant="default" className="bg-amber-50 border-amber-200 dark:bg-amber-900/30 dark:border-amber-700">
+                        <MailWarning className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <AlertTitle className="text-amber-700 dark:text-amber-300">Important: Email HTML Best Practices</AlertTitle>
+                        <AlertDescription className="text-amber-600 dark:text-amber-500 text-xs">
+                            Creating HTML emails that render consistently across all email clients (Outlook, Gmail, Apple Mail, etc.) is complex. 
+                            For best results:
+                            <ul className="list-disc pl-5 mt-1 space-y-0.5">
+                                <li>Consider using HTML table-based layouts for structure.</li>
+                                <li>Use inline CSS styles (e.g., `style="color: blue;"`) instead of style blocks or external stylesheets.</li>
+                                <li>Keep your HTML simple and avoid complex CSS like Flexbox or Grid if broad compatibility is crucial.</li>
+                                <li>Always test your emails on different clients and devices using tools like Litmus or Email on Acid before sending.</li>
+                            </ul>
+                             Refer to the <a href="/campaign-guide" className="underline hover:text-amber-700 dark:hover:text-amber-300 font-semibold">Campaign Guide</a> for more tips.
+                        </AlertDescription>
+                    </Alert>
                     <div className="flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center">
                       <div className="flex items-center space-x-2">
                         <Checkbox id="includeUnsubscribeLink" checked={includeUnsubscribeLink} onCheckedChange={(checked) => setIncludeUnsubscribeLink(Boolean(checked))} />
@@ -833,3 +848,6 @@ export default function CreateCampaignPage() {
     </Suspense>
   );
 }
+
+
+    
