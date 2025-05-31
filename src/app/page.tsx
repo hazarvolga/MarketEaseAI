@@ -11,7 +11,7 @@ import {
   TrendingUp,
   Mail,
   Edit3,
-  Users2 as Users2Icon, // Corrected: Users2 is the actual Lucide name
+  Users2 as Users2Icon,
   Filter as FilterIcon,
   ChevronDown,
   Check,
@@ -32,11 +32,11 @@ import {
   ThumbsUp,
   UsersRound,
   UserPlus,
-  UserCircle as UserCircleLucide, // Added UserCircle aliased as UserCircleLucide
+  UserCircle as UserCircleLucide, 
   PieChart as PieChartIcon,
   LineChart as LineChartIconLucide,
   ListChecks,
-  Users, // Added Users for "Reach" metric
+  Users, 
 } from 'lucide-react';
 import {
   Select,
@@ -75,6 +75,8 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 type Timeframe = 'last7days' | 'last30days' | 'last90days';
 
@@ -85,7 +87,7 @@ interface SocialChannelUIData {
   status: 'connected' | 'disconnected';
   engagementRate?: number;
   followerChange?: number;
-  progressValue?: number; // Added for consistency
+  progressValue?: number; 
 }
 
 const allPossibleChannels: SocialChannelUIData[] = [
@@ -100,24 +102,34 @@ const allPossibleChannels: SocialChannelUIData[] = [
 
 const LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY = 'marketMaestroDashboardChannels';
 
+// Define metricDetails and initialSocialMetricsPlaceholder outside the component
 const metricDetails: ChartConfig & { [key: string]: { label?: string; plottable?: boolean; icon?: React.ElementType; color?: string; description?: string; } } = {
   followerGrowth: { label: "Follower Growth", plottable: true, color: "hsl(var(--chart-1))", icon: Users2Icon },
   avgEngagementRate: { label: "Avg. Engagement Rate (%)", plottable: true, color: "hsl(var(--chart-2))", icon: TrendingUp },
   postsPublished: { label: "Posts Published", plottable: true, color: "hsl(var(--chart-3))", icon: Edit3 },
-  reach: { label: "Reach", plottable: true, color: "hsl(var(--chart-4))", icon: UsersRound }, // Changed from Users to UsersRound
+  reach: { label: "Reach", plottable: true, color: "hsl(var(--chart-4))", icon: UsersRound },
   impressions: { label: "Impressions", plottable: true, color: "hsl(var(--chart-5))", icon: Eye },
-  ctr: { label: "CTR (%)", plottable: true, color: "var(--color-cyan, hsl(180, 100%, 50%))", icon: ArrowRight },
+  ctr: { label: "CTR (%)", plottable: true, color: "var(--color-cyan, hsl(180, 100%, 50%))", icon: ArrowRight }, // Example custom color
   storyPostViews: { label: "Story/Post Views", plottable: true, color: "var(--color-orange, hsl(30, 100%, 50%))", icon: ImageIconLucide },
   profileVisits: { label: "Profile Visits", plottable: true, color: "var(--color-purple, hsl(270, 100%, 50%))", icon: UserCircleLucide },
   audienceGrowthRate: { label: "Audience Growth Rate (%)", plottable: true, color: "var(--color-teal, hsl(160, 100%, 50%))", icon: UserPlus },
   topPerformingPost: { label: "Top Performing Post", plottable: false, icon: ThumbsUp },
 };
 
+const initialSocialMetricsPlaceholder: Record<string, string | number> = Object.fromEntries(
+  Object.keys(metricDetails).map(key => {
+    if (key === 'topPerformingPost') {
+      return [key, "Loading Top Post..."];
+    }
+    return [key, "--"];
+  })
+);
+
 const plottableMetrics = Object.keys(metricDetails).filter(key => metricDetails[key].plottable);
 
 // Mock data generation functions
 const generateSocialChartData = (timeframe: Timeframe, platformId: string | null = null) => {
-  const points = timeframe === 'last7days' ? 7 : timeframe === 'last30days' ? 4 : 12;
+  const points = timeframe === 'last7days' ? 7 : timeframe === 'last30days' ? 4 : 12; // 4 weeks for 30 days, 12 months for 90 (conceptual)
   const labelPrefix = timeframe === 'last7days' ? 'Day ' : timeframe === 'last30days' ? 'W' : 'M';
   
   let platformMultiplier = 1; // Overall
@@ -134,7 +146,7 @@ const generateSocialChartData = (timeframe: Timeframe, platformId: string | null
       name: `${labelPrefix}${i + 1}`,
       followerGrowth: Math.floor(baseFollowers * (1 + (Math.random() - 0.5) * 0.2)),
       avgEngagementRate: parseFloat(Math.max(0.1, baseEngagement * (1 + (Math.random() - 0.5) * 0.3)).toFixed(1)),
-      postsPublished: Math.floor((Math.random() * 2 + 1) * platformMultiplier * (points === 7 ? 1 : 0.5)),
+      postsPublished: Math.floor((Math.random() * 2 + 1) * platformMultiplier * (points === 7 ? 1 : (points === 4 ? 7 : 30 / 12))), // adjust for period
       reach: Math.floor((Math.random() * 500 + 200) * platformMultiplier),
       impressions: Math.floor((Math.random() * 1000 + 500) * platformMultiplier),
       ctr: parseFloat(Math.max(0.1, (Math.random() * 1 + 0.2) * platformMultiplier).toFixed(1)),
@@ -153,19 +165,19 @@ const generateSocialSummaryMetrics = (timeframe: Timeframe, platformId: string |
   else if (platformId === 'twitter') platformMultiplier = 0.5;
   else if (platformId === 'youtube') platformMultiplier = 0.7;
 
-  const timeMultiplier = timeframe === 'last7days' ? 1 : timeframe === 'last30days' ? 4.3 : 12; // approx weeks/months
+  const timeMultiplier = timeframe === 'last7days' ? 1 : timeframe === 'last30days' ? 4.3 : 12.9; // days / (days per week/month)
 
   return {
-    followerGrowth: Math.floor((Math.random() * 100 + 50) * platformMultiplier * (timeMultiplier / 4.3)),
+    followerGrowth: Math.floor((Math.random() * 100 + 50) * platformMultiplier * (timeframe === 'last7days' ? 0.25 : (timeframe === 'last30days' ? 1 : 3))),
     avgEngagementRate: parseFloat(Math.max(0.5, (Math.random() * 3 + 1.5) * platformMultiplier).toFixed(1)),
-    postsPublished: Math.floor((Math.random() * 10 + 5) * platformMultiplier * (timeMultiplier / 4.3)),
-    reach: Math.floor((Math.random() * 2000 + 1000) * platformMultiplier * (timeMultiplier / 4.3)),
-    impressions: Math.floor((Math.random() * 5000 + 2500) * platformMultiplier * (timeMultiplier / 4.3)),
+    postsPublished: Math.floor((Math.random() * 10 + 5) * platformMultiplier * (timeframe === 'last7days' ? 0.25 : (timeframe === 'last30days' ? 1 : 3))),
+    reach: Math.floor((Math.random() * 2000 + 1000) * platformMultiplier * (timeframe === 'last7days' ? 0.25 : (timeframe === 'last30days' ? 1 : 3))),
+    impressions: Math.floor((Math.random() * 5000 + 2500) * platformMultiplier * (timeframe === 'last7days' ? 0.25 : (timeframe === 'last30days' ? 1 : 3))),
     ctr: parseFloat(Math.max(0.2, (Math.random() * 1.5 + 0.5) * platformMultiplier).toFixed(1)),
-    storyPostViews: Math.floor((Math.random() * 1500 + 700) * platformMultiplier * (timeMultiplier / 4.3)),
-    profileVisits: Math.floor((Math.random() * 200 + 100) * platformMultiplier * (timeMultiplier / 4.3)),
+    storyPostViews: Math.floor((Math.random() * 1500 + 700) * platformMultiplier * (timeframe === 'last7days' ? 0.25 : (timeframe === 'last30days' ? 1 : 3))),
+    profileVisits: Math.floor((Math.random() * 200 + 100) * platformMultiplier * (timeframe === 'last7days' ? 0.25 : (timeframe === 'last30days' ? 1 : 3))),
     audienceGrowthRate: parseFloat(Math.max(0.1, (Math.random() * 0.8 + 0.1) * platformMultiplier).toFixed(1)),
-    topPerformingPost: `Top post for ${platformId || 'Overall'} - ${timeframe}`,
+    topPerformingPost: `Top post for ${platformId || 'Overall'} in ${timeframe}`,
   };
 };
 
@@ -182,6 +194,7 @@ const generateEmailChartData = (timeframe: Timeframe) => {
 };
 
 export default function DashboardPage() {
+  const [hasMounted, setHasMounted] = React.useState(false);
   const [socialTimeframe, setSocialTimeframe] = useState<Timeframe>('last30days');
   const [emailTimeframe, setEmailTimeframe] = useState<Timeframe>('last30days');
   
@@ -195,19 +208,33 @@ export default function DashboardPage() {
   const [isChartMetricFilterOpen, setIsChartMetricFilterOpen] = useState(false);
   const [selectedChartMetrics, setSelectedChartMetrics] = useState<string[]>(['followerGrowth', 'avgEngagementRate']);
 
-  const [displayedSocialSummaryMetrics, setDisplayedSocialSummaryMetrics] = useState<any>(generateSocialSummaryMetrics('last30days'));
-  const [chartDataForSocial, setChartDataForSocial] = useState<any[]>(generateSocialChartData('last30days'));
+  const [displayedSocialSummaryMetrics, setDisplayedSocialSummaryMetrics] =
+    useState<Record<string, string | number> | null>(null);
+  const [chartDataForSocial, setChartDataForSocial] =
+    useState<any[] | null>(null);
+
+  const [currentEmailChartData, setCurrentEmailChartData] = 
+    useState<any[] | null>(null);
+  const [emailSummaryMetrics, setEmailSummaryMetrics] = 
+    useState<Record<string, string | number> | null>(null);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   // Load dashboard channel preferences from localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (hasMounted) { // Ensure this only runs on client
       const storedPreferenceString = localStorage.getItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY);
       let activeChannelIds: string[] = [];
       if (storedPreferenceString) {
         try {
-          const parsed = JSON.parse(storedPreferenceString);
-          if (Array.isArray(parsed)) { // Ensure it's an array of strings (IDs)
-            activeChannelIds = parsed.filter(id => typeof id === 'string');
+          // Assuming stored preference is an array of ConfiguredSocialChannel objects
+          const parsedPreferences: Array<{ id: string; status: string }> = JSON.parse(storedPreferenceString);
+          if (Array.isArray(parsedPreferences)) {
+            activeChannelIds = parsedPreferences
+              .filter(p => p.status === 'Connected' && typeof p.id === 'string')
+              .map(p => p.id);
           }
         } catch (e) {
           console.error("Error parsing dashboard channels from localStorage", e);
@@ -215,27 +242,39 @@ export default function DashboardPage() {
       }
       
       const channelsFromStorage = allPossibleChannels.filter(channel => 
-        activeChannelIds.includes(channel.id) && channel.status === 'connected'
+        activeChannelIds.includes(channel.id) 
       );
       setDashboardChannelsToDisplay(channelsFromStorage);
-
-      // If no specific channel is selected via filter, default to the first connected channel or null
-      if (!selectedSocialChannelId && channelsFromStorage.length > 0) {
-        // setSelectedSocialChannelId(channelsFromStorage[0].id); // Option: default to first connected
-      } else if (!selectedSocialChannelId && allPossibleChannels.find(ch => ch.status === 'connected')) {
-        // setSelectedSocialChannelId(allPossibleChannels.find(ch => ch.status === 'connected')!.id);
-      }
-
       setInitiallyLoadedLocalStorage(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount to load from localStorage
+  }, [hasMounted]);
 
   // Update Social Performance Card data when filter or timeframe changes
   useEffect(() => {
-    setDisplayedSocialSummaryMetrics(generateSocialSummaryMetrics(socialTimeframe, selectedSocialChannelId));
-    setChartDataForSocial(generateSocialChartData(socialTimeframe, selectedSocialChannelId));
-  }, [selectedSocialChannelId, socialTimeframe]);
+    if (hasMounted) {
+      setDisplayedSocialSummaryMetrics(generateSocialSummaryMetrics(socialTimeframe, selectedSocialChannelId));
+      setChartDataForSocial(generateSocialChartData(socialTimeframe, selectedSocialChannelId));
+    }
+  }, [selectedSocialChannelId, socialTimeframe, hasMounted]);
+
+  // Update Email Marketing Card data when timeframe changes
+  useEffect(() => {
+    if (hasMounted) {
+      const newEmailChartData = generateEmailChartData(emailTimeframe);
+      setCurrentEmailChartData(newEmailChartData);
+
+      const openRateEntry = newEmailChartData.find(d => d.name === 'Open Rate');
+      const ctrEntry = newEmailChartData.find(d => d.name === 'CTR');
+      const bounceEntry = newEmailChartData.find(d => d.name === 'Bounce Rate');
+      setEmailSummaryMetrics({
+        avgOpenRate: `${openRateEntry?.value || '0.0'}% ${openRateEntry?.value && openRateEntry.value > 25 ? '🔥' : ''}`,
+        avgClickRate: `${ctrEntry?.value || '0.0'}%`,
+        estBounceRate: `${bounceEntry?.value || '0.0'}%`,
+        newSubscribers: `+${Math.round((openRateEntry?.value || 0) * (emailTimeframe === 'last7days' ? 2.5 : emailTimeframe === 'last30days' ? 10 : 30))}`,
+      });
+    }
+  }, [emailTimeframe, hasMounted]);
+
 
   const connectedPlatformsForFilter = useMemo(() => {
     return allPossibleChannels.filter(channel => channel.status === 'connected');
@@ -245,23 +284,6 @@ export default function DashboardPage() {
     if (!selectedSocialChannelId) return null;
     return allPossibleChannels.find(c => c.id === selectedSocialChannelId);
   }, [selectedSocialChannelId]);
-
-  const currentEmailChartData = useMemo(() => {
-    return generateEmailChartData(emailTimeframe);
-  }, [emailTimeframe]);
-
-  const emailSummaryMetrics = useMemo(() => {
-    const data = currentEmailChartData;
-    const openRateEntry = data.find(d => d.name === 'Open Rate');
-    const ctrEntry = data.find(d => d.name === 'CTR');
-    const bounceEntry = data.find(d => d.name === 'Bounce Rate');
-    return {
-      avgOpenRate: `${openRateEntry?.value || '0.0'}% ${openRateEntry?.value && openRateEntry.value > 25 ? '🔥' : ''}`,
-      avgClickRate: `${ctrEntry?.value || '0.0'}%`,
-      estBounceRate: `${bounceEntry?.value || '0.0'}%`,
-      newSubscribers: `+${Math.round((openRateEntry?.value || 0) * (emailTimeframe === 'last7days' ? 2.5 : emailTimeframe === 'last30days' ? 10 : 30))}`,
-    };
-  }, [currentEmailChartData, emailTimeframe]);
 
   const upcomingPublicationsMock = [
     { id: 1, icon: <Edit3 className="h-5 w-5 text-blue-500" />, title: "New Blog: AI in Modern Architecture", time: "Tomorrow, 09:00 AM", type: "Blog Post", link: "/social-media/create-post" },
@@ -279,7 +301,7 @@ export default function DashboardPage() {
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                  <CardTitle className="text-xl flex items-center flex-wrap gap-x-2">
-                  {selectedChannelDetails ? (
+                  {selectedChannelDetails && hasMounted ? (
                     <>
                       {React.cloneElement(selectedChannelDetails.icon as React.ReactElement, { className: "h-6 w-6" })}
                       {selectedChannelDetails.platform} Performance
@@ -306,7 +328,7 @@ export default function DashboardPage() {
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm" className="h-9 w-full xs:w-auto text-xs">
                         <FilterIcon className="mr-2 h-4 w-4" /> 
-                        {selectedChannelDetails ? (
+                        {selectedChannelDetails && hasMounted ? (
                             <span className="flex items-center">
                                 {React.cloneElement(selectedChannelDetails.icon as React.ReactElement, {className: "h-4 w-4 mr-1"})}
                                 {selectedChannelDetails.platform}
@@ -326,7 +348,7 @@ export default function DashboardPage() {
                             <CommandGroup>
                                 <CommandItem 
                                   key="overall-social-filter"
-                                  value="All Channels" // This value is used for display in CommandInput if selected
+                                  value="All Channels" 
                                   onSelect={() => { setSelectedSocialChannelId(null); setIsSocialChannelFilterOpen(false); setChannelSearchValue(""); }}>
                                     <LayoutDashboard className="mr-2 h-4 w-4"/> Overall Performance
                                     <Check className={cn("ml-auto h-4 w-4", selectedSocialChannelId === null ? "opacity-100" : "opacity-0")}/>
@@ -336,7 +358,7 @@ export default function DashboardPage() {
                                 .map(channel => (
                                     <CommandItem
                                       key={channel.id}
-                                      value={channel.platform} // This value is used for display
+                                      value={channel.platform} 
                                       onSelect={() => {
                                           setSelectedSocialChannelId(channel.id);
                                           setIsSocialChannelFilterOpen(false);
@@ -358,25 +380,25 @@ export default function DashboardPage() {
                 </div>
               </div>
               <CardDescription className="text-xs sm:text-sm mt-1">
-                Key metrics and trends for {selectedChannelDetails ? selectedChannelDetails.platform : "your connected social"} channels.
+                Key metrics and trends for {selectedChannelDetails && hasMounted ? selectedChannelDetails.platform : "your connected social"} channels.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 flex-grow">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-2 gap-y-3 text-left text-xs">
-                {Object.entries(metricDetails)
-                .filter(([key]) => key !== 'topPerformingPost') // Exclude non-numeric for this grid
-                .map(([key, detail]) => {
-                    const IconComponent = detail.icon as React.ElementType; // Already a component type
-                    const value = (displayedSocialSummaryMetrics as any)[key];
+                {Object.entries(displayedSocialSummaryMetrics || initialSocialMetricsPlaceholder)
+                .filter(([key]) => key !== 'topPerformingPost')
+                .map(([key, value]) => {
+                    const detail = metricDetails[key];
+                    const IconComponent = detail?.icon as React.ElementType;
                     return (
                     <div key={key} className="p-1.5 rounded-md bg-muted/40 hover:bg-muted/70">
                         <div className="flex items-center text-[10px] sm:text-xs text-muted-foreground mb-0.5">
                         {IconComponent && <IconComponent className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 flex-shrink-0"/>}
-                        <span className="truncate" title={String(detail.label)}>{String(detail.label)}</span>
+                        <span className="truncate" title={String(detail?.label)}>{String(detail?.label)}</span>
                         </div>
-                        <p className="text-sm sm:text-base font-bold truncate" title={String(value || '0')}>
-                        {value !== undefined ? String(value) : "0"}
-                        {(key.toLowerCase().includes('rate') || key.toLowerCase().includes('ctr')) && value !== undefined ? '%' : ''}
+                        <p className="text-sm sm:text-base font-bold truncate" title={String(value || (key === 'topPerformingPost' ? 'Loading...' : '0'))}>
+                          {value !== undefined ? String(value) : (key === 'topPerformingPost' ? 'Loading...' : "0")}
+                          {(key.toLowerCase().includes('rate') || key.toLowerCase().includes('ctr')) && value !== undefined && value !== '--' && typeof value === 'number' ? '%' : ''}
                         </p>
                     </div>
                     );
@@ -403,7 +425,7 @@ export default function DashboardPage() {
                           <CommandGroup heading="Select Metrics (Max 3 Recommended)">
                             {plottableMetrics.map(key => {
                                 const metricConfig = metricDetails[key];
-                                const IconComponent = metricConfig.icon; // Already a component type
+                                const IconComponent = metricConfig.icon;
                                 return (
                                 <CommandItem 
                                     key={key}
@@ -435,55 +457,63 @@ export default function DashboardPage() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                <ChartContainer config={metricDetails} className="aspect-auto h-[200px] sm:h-[220px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsLineChart data={chartDataForSocial} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                      <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                      <YAxis tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                      <RechartsTooltip 
-                        cursor={false}
-                        content={<ChartTooltipContent 
-                                    indicator="line" 
-                                    nameKey="name"
-                                    formatter={(value, name, itemPayload) => {
-                                      const itemConfig = metricDetails[itemPayload.dataKey as string];
-                                      const IconComp = itemConfig?.icon; // Already a component type
-                                      return (
-                                        <div className="flex items-center">
-                                          {IconComp && <IconComp className="h-3 w-3 mr-1.5" style={{color: itemPayload.color}}/>}
-                                          <span style={{color: itemPayload.color}}>{String(itemConfig?.label) || name}: {value}{(String(itemConfig?.label).includes('%') ? '%' : '')}</span>
-                                        </div>
-                                      );
-                                    }}
-                                    />} 
-                        />
-                      <ChartLegend content={<ChartLegendContent icon={LineChartIconLucide} wrapperStyle={{fontSize: '10px'}}/>} />
-                      {selectedChartMetrics.map(metricKey => {
-                        const metricConfig = metricDetails[metricKey];
-                        if (!metricConfig || !metricConfig.plottable) return null;
-                        return (
-                          <Line 
-                            key={metricKey} 
-                            dataKey={metricKey} 
-                            type="monotone" 
-                            stroke={metricConfig.color || "hsl(var(--primary))"} 
-                            strokeWidth={2} 
-                            dot={{r:3, fill: metricConfig.color || "hsl(var(--primary))", strokeWidth:1}} 
-                            activeDot={{r:5, strokeWidth:2}}
-                            name={String(metricConfig.label)}
+                {hasMounted && chartDataForSocial ? (
+                  <ChartContainer config={metricDetails} className="aspect-auto h-[200px] sm:h-[220px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsLineChart data={chartDataForSocial} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                        <YAxis tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                        <RechartsTooltip 
+                          cursor={false}
+                          content={<ChartTooltipContent 
+                                      indicator="line" 
+                                      nameKey="name"
+                                      formatter={(value, name, itemPayload) => {
+                                        const itemConfig = metricDetails[itemPayload.dataKey as string];
+                                        const IconComp = itemConfig?.icon;
+                                        return (
+                                          <div className="flex items-center">
+                                            {IconComp && <IconComp className="h-3 w-3 mr-1.5" style={{color: itemPayload.color}}/>}
+                                            <span style={{color: itemPayload.color}}>{String(itemConfig?.label) || name}: {value}{(String(itemConfig?.label).includes('%') ? '%' : '')}</span>
+                                          </div>
+                                        );
+                                      }}
+                                      />} 
                           />
-                        );
-                      })}
-                    </RechartsLineChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                        <ChartLegend content={<ChartLegendContent icon={LineChartIconLucide} wrapperStyle={{fontSize: '10px'}}/>} />
+                        {selectedChartMetrics.map(metricKey => {
+                          const metricConfig = metricDetails[metricKey];
+                          if (!metricConfig || !metricConfig.plottable) return null;
+                          return (
+                            <Line 
+                              key={metricKey} 
+                              dataKey={metricKey} 
+                              type="monotone" 
+                              stroke={metricConfig.color || "hsl(var(--primary))"} 
+                              strokeWidth={2} 
+                              dot={{r:3, fill: metricConfig.color || "hsl(var(--primary))", strokeWidth:1}} 
+                              activeDot={{r:5, strokeWidth:2}}
+                              name={String(metricConfig.label)}
+                            />
+                          );
+                        })}
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                ) : (
+                   <div className="aspect-auto h-[200px] sm:h-[220px] w-full flex items-center justify-center bg-muted/30 rounded-md">
+                    <Skeleton className="h-full w-full" />
+                  </div>
+                )}
               </div>
                 <div className="mt-3 space-y-1">
                     <Label className="text-xs text-muted-foreground">Top Performing Post (Mock)</Label>
-                    <div className="p-2 border rounded-md bg-background hover:bg-muted/50 transition-colors text-xs flex items-center gap-2">
+                     <div className="p-2 border rounded-md bg-background hover:bg-muted/50 transition-colors text-xs flex items-center gap-2">
                         {metricDetails.topPerformingPost.icon && React.createElement(metricDetails.topPerformingPost.icon, {className:"h-4 w-4 text-green-500 flex-shrink-0"})}
-                        <p className="truncate flex-1">{(displayedSocialSummaryMetrics as any).topPerformingPost || "No data"}</p>
+                        <p className="truncate flex-1">
+                          {hasMounted && displayedSocialSummaryMetrics ? (displayedSocialSummaryMetrics as any).topPerformingPost : "Loading..."}
+                        </p>
                         <Button variant="link" size="xs" className="p-0 h-auto">View</Button>
                     </div>
                 </div>
@@ -491,7 +521,7 @@ export default function DashboardPage() {
                     <Lightbulb className="h-4 w-4 text-blue-500" />
                     <AlertTitle className="text-blue-700 dark:text-blue-300 text-sm">Smart Suggestion</AlertTitle>
                     <AlertDescription className="text-blue-600 dark:text-blue-400">
-                        Your {selectedChannelDetails ? selectedChannelDetails.platform : 'overall'} engagement rate is {(displayedSocialSummaryMetrics as any).avgEngagementRate}%. 
+                        Your {selectedChannelDetails && hasMounted ? selectedChannelDetails.platform : 'overall'} engagement rate is {hasMounted && displayedSocialSummaryMetrics ? (displayedSocialSummaryMetrics as any).avgEngagementRate : '--'}%. 
                         <Button size="xs" variant="link" className="p-0 h-auto ml-1 text-blue-700 dark:text-blue-300 text-xs hover:underline">Get AI ideas to boost it?</Button>
                     </AlertDescription>
                 </Alert>
@@ -527,47 +557,53 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-left text-xs">
                 <div className="p-1.5 rounded-md bg-muted/40 hover:bg-muted/70">
                     <p className="text-[10px] sm:text-xs text-muted-foreground">Avg. Open Rate</p>
-                    <p className="text-sm sm:text-base font-bold">{emailSummaryMetrics.avgOpenRate}</p>
+                    <p className="text-sm sm:text-base font-bold">{hasMounted && emailSummaryMetrics ? emailSummaryMetrics.avgOpenRate : '--%'}</p>
                 </div>
                  <div className="p-1.5 rounded-md bg-muted/40 hover:bg-muted/70">
                     <p className="text-[10px] sm:text-xs text-muted-foreground">Avg. Click Rate</p>
-                    <p className="text-sm sm:text-base font-bold">{emailSummaryMetrics.avgClickRate}</p>
+                    <p className="text-sm sm:text-base font-bold">{hasMounted && emailSummaryMetrics ? emailSummaryMetrics.avgClickRate : '--%'}</p>
                 </div>
                  <div className="p-1.5 rounded-md bg-muted/40 hover:bg-muted/70">
                     <p className="text-[10px] sm:text-xs text-muted-foreground">New Subscribers</p>
-                    <p className="text-sm sm:text-base font-bold text-green-600 dark:text-green-400">{emailSummaryMetrics.newSubscribers}</p>
+                    <p className="text-sm sm:text-base font-bold text-green-600 dark:text-green-400">{hasMounted && emailSummaryMetrics ? emailSummaryMetrics.newSubscribers : '--'}</p>
                 </div>
                 <div className="p-1.5 rounded-md bg-muted/40 hover:bg-muted/70">
                     <p className="text-[10px] sm:text-xs text-muted-foreground">Est. Bounce Rate</p>
-                    <p className="text-sm sm:text-base font-bold">{emailSummaryMetrics.estBounceRate}</p>
+                    <p className="text-sm sm:text-base font-bold">{hasMounted && emailSummaryMetrics ? emailSummaryMetrics.estBounceRate : '--%'}</p>
                 </div>
               </div>
-               <ChartContainer config={{
-                  value: { label: "Percentage" },
-                  "Open Rate": { label: "Open Rate", color: "hsl(var(--chart-1))" },
-                  CTR: { label: "CTR", color: "hsl(var(--chart-2))" },
-                  "Bounce Rate": { label: "Bounce Rate", color: "hsl(var(--chart-3))" },
-                } satisfies ChartConfig} className="aspect-auto h-[200px] sm:h-[220px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart data={currentEmailChartData} layout="vertical" margin={{ left: 10, right: 10, top: 5, bottom: 0 }}>
-                    <CartesianGrid horizontal={false} strokeDasharray="3 3"/>
-                    <XAxis type="number" dataKey="value" tickFormatter={(value) => `${value}%`} fontSize={10} axisLine={false} tickLine={false} />
-                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={10} width={70} />
-                    <RechartsTooltip cursor={{fill: 'hsl(var(--muted)/0.3)'}} content={<ChartTooltipContent indicator="line" hideLabel />} />
-                    <ChartLegend content={<ChartLegendContent icon={PieChartIcon} wrapperStyle={{fontSize: '10px'}} />} />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={10}>
-                     {currentEmailChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill || "hsl(var(--chart-1))"} />
-                    ))}
-                    </Bar>
-                  </RechartsBarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+              {hasMounted && currentEmailChartData ? (
+                 <ChartContainer config={{
+                    value: { label: "Percentage" },
+                    "Open Rate": { label: "Open Rate", color: "hsl(var(--chart-1))" },
+                    CTR: { label: "CTR", color: "hsl(var(--chart-2))" },
+                    "Bounce Rate": { label: "Bounce Rate", color: "hsl(var(--chart-3))" },
+                  } satisfies ChartConfig} className="aspect-auto h-[200px] sm:h-[220px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsBarChart data={currentEmailChartData} layout="vertical" margin={{ left: 10, right: 10, top: 5, bottom: 0 }}>
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3"/>
+                      <XAxis type="number" dataKey="value" tickFormatter={(value) => `${value}%`} fontSize={10} axisLine={false} tickLine={false} />
+                      <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={10} width={70} />
+                      <RechartsTooltip cursor={{fill: 'hsl(var(--muted)/0.3)'}} content={<ChartTooltipContent indicator="line" hideLabel />} />
+                      <ChartLegend content={<ChartLegendContent icon={PieChartIcon} wrapperStyle={{fontSize: '10px'}} />} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={10}>
+                       {currentEmailChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill || "hsl(var(--chart-1))"} />
+                      ))}
+                      </Bar>
+                    </RechartsBarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : (
+                  <div className="aspect-auto h-[200px] sm:h-[220px] w-full flex items-center justify-center bg-muted/30 rounded-md">
+                    <Skeleton className="h-full w-full" />
+                  </div>
+              )}
               <Separator className="my-2" />
               <div>
                 <h4 className="font-semibold text-sm mb-1.5">Recent Campaigns (Mock)</h4>
                 <div className="space-y-1.5">
-                  {upcomingPublicationsMock.filter(p => p.type === "Newsletter").slice(0,2).map(campaign => ( // Example: Show only newsletters here
+                  {upcomingPublicationsMock.filter(p => p.type === "Newsletter").slice(0,2).map(campaign => ( 
                     <div key={campaign.id} className="flex items-center justify-between p-2 border rounded-md bg-background hover:bg-muted/50 transition-colors text-xs">
                       <div className="min-w-0 flex items-center gap-2">
                         {campaign.icon}
@@ -587,7 +623,7 @@ export default function DashboardPage() {
                   <Lightbulb className="h-4 w-4 text-blue-500" />
                   <AlertTitle className="text-blue-700 dark:text-blue-300 text-sm">Smart Suggestion</AlertTitle>
                   <AlertDescription className="text-blue-600 dark:text-blue-400">
-                      Your average email open rate is {emailSummaryMetrics.avgOpenRate}. 
+                      Your average email open rate is {hasMounted && emailSummaryMetrics ? emailSummaryMetrics.avgOpenRate : '--%'}. 
                       <Button size="xs" variant="link" className="p-0 h-auto ml-1 text-blue-700 dark:text-blue-300 text-xs hover:underline">Get AI ideas for subject lines?</Button>
                   </AlertDescription>
               </Alert>
@@ -700,18 +736,29 @@ export default function DashboardPage() {
                 ))}
                 </div>
             ) : (
-                <Card className="shadow-sm">
-                    <CardContent className="py-10 flex flex-col items-center justify-center text-center">
-                        <ImageIconLucide className="h-10 w-10 text-muted-foreground mb-3" />
-                        <h3 className="text-md font-semibold">No social channels selected for dashboard display.</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                        Configure in <Link href="/admin/settings" className="underline hover:text-primary">System Configuration &gt; Social Accounts</Link>.
-                        </p>
-                    </CardContent>
-                </Card>
+                 <Card className="shadow-sm">
+                  <CardContent className="py-10 flex flex-col items-center justify-center text-center">
+                  {!hasMounted || !initiallyLoadedLocalStorage ? ( // Show loader if hasMounted is false OR localStorage hasn't confirmed loading
+                      <>
+                          <Loader2 className="h-10 w-10 text-muted-foreground mb-3 animate-spin" />
+                          <h3 className="text-md font-semibold">Loading Channel Preferences...</h3>
+                      </>
+                  ) : (
+                      <>
+                          <LayoutDashboard className="h-10 w-10 text-muted-foreground mb-3" />
+                          <h3 className="text-md font-semibold">No social channels selected for dashboard display.</h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                          Configure in <Link href="/admin/settings" className="underline hover:text-primary">System Configuration &gt; Social Accounts</Link>.
+                          </p>
+                      </>
+                  )}
+                  </CardContent>
+              </Card>
             )}
         </div>
       </div>
     </MainLayout>
   );
 }
+
+    
