@@ -72,16 +72,33 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { EmailTemplate } from '@/lib/email-template-data';
 import { mockTemplates as allMockTemplates } from '@/lib/email-template-data';
 import { handleGenerateCampaignElementsAction } from './actions';
-import type { GenerateCampaignElementsInput, GenerateCampaignElementsOutput, CampaignGoalSchema as CampaignGoalZodSchema, CampaignToneSchema as CampaignToneZodSchema } from '@/ai/flows/generate-campaign-elements';
+// Updated import to use the types CampaignGoal and CampaignTone
+import type { GenerateCampaignElementsInput, GenerateCampaignElementsOutput, CampaignGoal, CampaignTone } from '@/ai/flows/generate-campaign-elements';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 
-const CampaignGoalEnum = CampaignGoalZodSchema.enum;
-type CampaignGoal = z.infer<typeof CampaignGoalZodSchema>;
+// Manually define enums based on the flow's Zod schemas since we are not exporting the Zod schemas themselves anymore
+const CampaignGoalEnum = {
+  NEW_PRODUCT_FEATURE: "new_product_feature",
+  SALE_DISCOUNT: "sale_discount",
+  NEWSLETTER_UPDATE: "newsletter_update",
+  WEBSITE_TRAFFIC: "website_traffic",
+  EVENT_INVITATION: "event_invitation",
+  LEAD_GENERATION: "lead_generation",
+  RE_ENGAGEMENT: "re_engagement",
+  OTHER: "other",
+} as const;
 
-const CampaignToneEnum = CampaignToneZodSchema.enum;
-type CampaignTone = z.infer<typeof CampaignToneZodSchema>;
+const CampaignToneEnum = {
+  PROFESSIONAL: "professional",
+  FRIENDLY: "friendly",
+  URGENT: "urgent",
+  INFORMATIVE: "informative",
+  PLAYFUL: "playful",
+  EMPATHETIC: "empathetic",
+  INSPIRATIONAL: "inspirational",
+} as const;
 
 
 interface MockRecipientGroup {
@@ -102,7 +119,6 @@ const mockRecipientGroups: MockRecipientGroup[] = [
     { id: 'seg4', name: 'Potential Leads (No Purchase Yet)', type: 'segment', count: 780 },
 ];
 
-// Mock brand data - in a real app, this would be fetched or come from a context/store
 const mockBrandProfileForAI: GenerateCampaignElementsInput['brandProfile'] = {
   brandName: "ArchStruct Design Suite",
   brandCorePurpose: "To empower design and engineering professionals with intuitive, powerful, and integrated software tools that enhance creativity, precision, and project efficiency.",
@@ -166,12 +182,13 @@ type CampaignType = "standard" | "automation" | "ab_test" | "rss_feed";
 type ScheduleOption = "immediate" | "later";
 type PreviewDevice = "desktop" | "mobile";
 
-// AI Assistant Modal Form Schema
+
+// AI Assistant Modal Form Schema - uses the types imported from the flow
 const aiAssistantFormSchema = z.object({
-  campaignGoal: CampaignGoalZodSchema,
+  campaignGoal: z.nativeEnum(CampaignGoalEnum), // Use nativeEnum with the manually defined enum
   keyMessageOrOffer: z.string().min(10, "Must be at least 10 characters").max(500, "Cannot exceed 500 characters"),
   targetAudienceDescription: z.string().max(300, "Cannot exceed 300 characters").optional(),
-  desiredTone: CampaignToneZodSchema.optional(),
+  desiredTone: z.nativeEnum(CampaignToneEnum).optional(), // Use nativeEnum with the manually defined enum
 });
 type AiAssistantFormValues = z.infer<typeof aiAssistantFormSchema>;
 
@@ -239,10 +256,10 @@ function CreateCampaignFormComponent() {
   const aiForm = useForm<AiAssistantFormValues>({
     resolver: zodResolver(aiAssistantFormSchema),
     defaultValues: {
-      campaignGoal: CampaignGoalEnum.new_product_feature,
+      campaignGoal: CampaignGoalEnum.NEW_PRODUCT_FEATURE,
       keyMessageOrOffer: "",
       targetAudienceDescription: "",
-      desiredTone: CampaignToneEnum.professional,
+      desiredTone: CampaignToneEnum.PROFESSIONAL,
     },
   });
 
@@ -377,12 +394,11 @@ function CreateCampaignFormComponent() {
     startAiTransition(async () => {
       const payload: GenerateCampaignElementsInput = {
         ...values,
-        brandProfile: mockBrandProfileForAI, // Pass mock brand profile
+        brandProfile: mockBrandProfileForAI, 
       };
       const result = await handleGenerateCampaignElementsAction(payload);
       if (result.success && result.data) {
         setAiAssistantSuggestions(result.data);
-        // Pre-fill selection states for step 2
         setSelectedAiCampaignName(result.data.campaignNameSuggestions[0] || '');
         setSelectedAiSubjectLine(result.data.subjectLineSuggestions[0] || '');
         setSelectedAiPreviewText(result.data.previewTextSuggestions[0] || '');
@@ -401,10 +417,9 @@ function CreateCampaignFormComponent() {
     setSubjectLine(selectedAiSubjectLine);
     setPreviewText(selectedAiPreviewText);
     setEmailContent(editableAiEmailBody);
-    // CTA can be part of the body or used to guide button text later
     
     setIsAiAssistantModalOpen(false);
-    setAiAssistantStep(1); // Reset for next time
+    setAiAssistantStep(1); 
     aiForm.reset();
     setAiAssistantSuggestions(null);
     toast({ title: "AI Suggestions Applied", description: "Campaign details have been updated with AI suggestions." });
@@ -457,7 +472,7 @@ function CreateCampaignFormComponent() {
                         <CardTitle>Campaign Details</CardTitle>
                         <Dialog open={isAiAssistantModalOpen} onOpenChange={(isOpen) => {
                             setIsAiAssistantModalOpen(isOpen);
-                            if (!isOpen) { // Reset on close
+                            if (!isOpen) { 
                                 setAiAssistantStep(1);
                                 aiForm.reset();
                                 setAiAssistantSuggestions(null);
@@ -491,8 +506,8 @@ function CreateCampaignFormComponent() {
                                                 <SelectValue placeholder="Select campaign goal" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                {Object.entries(CampaignGoalEnum).map(([key, value]) => (
-                                                  <SelectItem key={key} value={value}>{value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
+                                                {Object.values(CampaignGoalEnum).map((value) => (
+                                                  <SelectItem key={value} value={value}>{value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
                                                 ))}
                                               </SelectContent>
                                             </Select>
@@ -524,8 +539,8 @@ function CreateCampaignFormComponent() {
                                                 <SelectValue placeholder="Select desired tone" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                {Object.entries(CampaignToneEnum).map(([key, value]) => (
-                                                  <SelectItem key={key} value={value}>{value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
+                                               {Object.values(CampaignToneEnum).map((value) => (
+                                                  <SelectItem key={value} value={value}>{value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
                                                 ))}
                                               </SelectContent>
                                             </Select>

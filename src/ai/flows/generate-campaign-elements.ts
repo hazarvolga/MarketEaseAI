@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI-powered campaign element generation.
@@ -10,7 +11,8 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const CampaignGoalSchema = z.enum([
+// Removed export from CampaignGoalSchema
+const CampaignGoalSchema = z.enum([
   "new_product_feature", 
   "sale_discount", 
   "newsletter_update", 
@@ -20,8 +22,10 @@ export const CampaignGoalSchema = z.enum([
   "re_engagement",
   "other"
 ]).describe("The primary goal of the email campaign.");
+export type CampaignGoal = z.infer<typeof CampaignGoalSchema>; // Exporting the type is fine
 
-export const CampaignToneSchema = z.enum([
+// Removed export from CampaignToneSchema
+const CampaignToneSchema = z.enum([
   "professional",
   "friendly",
   "urgent",
@@ -30,14 +34,14 @@ export const CampaignToneSchema = z.enum([
   "empathetic",
   "inspirational"
 ]).describe("The desired tone of voice for the campaign content.");
+export type CampaignTone = z.infer<typeof CampaignToneSchema>; // Exporting the type is fine
 
 const GenerateCampaignElementsInputSchema = z.object({
-  campaignGoal: CampaignGoalSchema,
+  campaignGoal: CampaignGoalSchema, // Use the internal schema
   keyMessageOrOffer: z.string().min(10, "Key message or offer must be at least 10 characters.").max(500, "Key message or offer cannot exceed 500 characters.").describe("The core message, product, or offer for this campaign."),
   targetAudienceDescription: z.string().optional().describe("Specific target audience for this campaign. If blank, Brand Profile audience will be primary."),
-  desiredTone: CampaignToneSchema.optional(),
+  desiredTone: CampaignToneSchema.optional(), // Use the internal schema
   
-  // Simplified Brand Profile Data - In a real app, this would be fetched
   brandProfile: z.object({
     brandName: z.string().describe("The official name of the brand."),
     brandCorePurpose: z.string().describe("The brand's fundamental reason for existence."),
@@ -119,3 +123,7 @@ const generateCampaignElementsFlow = ai.defineFlow(
     };
   }
 );
+
+// Exporting types derived from schemas (already done for input/output)
+// export type CampaignGoal = z.infer<typeof CampaignGoalSchema>; // Already exported at top
+// export type CampaignTone = z.infer<typeof CampaignToneSchema>; // Already exported at top
