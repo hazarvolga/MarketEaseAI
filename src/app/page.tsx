@@ -36,7 +36,8 @@ import {
   PieChart as PieChartIcon,
   LineChart as LineChartIconLucide,
   ListChecks,
-  Users, 
+  Users,
+  Loader2, // Added Loader2
 } from 'lucide-react';
 import {
   Select,
@@ -760,5 +761,3 @@ export default function DashboardPage() {
     </MainLayout>
   );
 }
-
-    
