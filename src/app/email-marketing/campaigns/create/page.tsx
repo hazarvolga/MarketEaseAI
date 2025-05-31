@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useTransition } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,7 +61,9 @@ import {
   Send, 
   FileText,
   Check, 
-  Search 
+  Search,
+  Lightbulb,
+  Copy
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -69,6 +71,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { EmailTemplate } from '@/lib/email-template-data';
 import { mockTemplates as allMockTemplates } from '@/lib/email-template-data';
+import { handleGenerateCampaignElementsAction } from './actions';
+import type { GenerateCampaignElementsInput, GenerateCampaignElementsOutput, CampaignGoalSchema as CampaignGoalZodSchema, CampaignToneSchema as CampaignToneZodSchema } from '@/ai/flows/generate-campaign-elements';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
+
+const CampaignGoalEnum = CampaignGoalZodSchema.enum;
+type CampaignGoal = z.infer<typeof CampaignGoalZodSchema>;
+
+const CampaignToneEnum = CampaignToneZodSchema.enum;
+type CampaignTone = z.infer<typeof CampaignToneZodSchema>;
+
 
 interface MockRecipientGroup {
   id: string;
@@ -88,14 +102,17 @@ const mockRecipientGroups: MockRecipientGroup[] = [
     { id: 'seg4', name: 'Potential Leads (No Purchase Yet)', type: 'segment', count: 780 },
 ];
 
-const mockBrand = {
-  name: "ArchStruct Design Suite",
-  product: "ArchModeler Pro",
-  targetAudience: "architects and structural engineers",
-  corePurpose: "to empower design and engineering professionals with intuitive, powerful, and integrated software tools",
-  supportEmail: "support@archstructsolutions.com",
-  websiteUrl: "https://www.archstructsuite.com",
+// Mock brand data - in a real app, this would be fetched or come from a context/store
+const mockBrandProfileForAI: GenerateCampaignElementsInput['brandProfile'] = {
+  brandName: "ArchStruct Design Suite",
+  brandCorePurpose: "To empower design and engineering professionals with intuitive, powerful, and integrated software tools that enhance creativity, precision, and project efficiency.",
+  customerValueProposition: "Our platform offers cutting-edge solutions for architects and civil engineers, streamlining complex design, analysis, and collaboration processes from concept to construction.",
+  targetAudience: "Architects, structural engineers, construction firms, BIM managers, design professionals in the AECO (Architecture, Engineering, Construction, and Operations) industry.",
+  brandVoice: "Professional, innovative, authoritative, supportive, and slightly technical but accessible.",
+  keyProductsOrServices: "ArchModeler Pro (BIM & 3D Modeling), StructAnalyse Ultimate (Structural Analysis & Simulation), CollabPlatform (Cloud-based Project Collaboration), RenderWorks (Photorealistic Rendering Engine)",
+  uniqueSellingPropositions: "Fully integrated suite reducing data silos; Advanced AI-powered analysis tools for optimal material usage and structural integrity; Intuitive user interface designed by industry professionals; Robust cloud collaboration features."
 };
+
 
 interface MockEmailTextContent {
   subject: string;
@@ -105,37 +122,39 @@ interface MockEmailTextContent {
   ctaText?: string;
 }
 
-function generateMockEmailContent(templateCategory: string, brand: typeof mockBrand): MockEmailTextContent {
-  const { name: brandName, product, targetAudience, corePurpose } = brand;
+function generateMockEmailContent(templateCategory: string, brand: GenerateCampaignElementsInput['brandProfile']): MockEmailTextContent {
+  const { brandName, keyProductsOrServices, targetAudience, brandCorePurpose } = brand;
+  const product = keyProductsOrServices?.split(',')[0].trim() || "Our Product/Service";
+
   let subject = `An Update from ${brandName}`;
   let preheader = `News for ${targetAudience}.`;
   let greeting = `Hi [User Name],`;
-  let body = `This is a general update regarding ${product}.\n\nWe aim ${corePurpose}.`;
+  let body = `This is a general update regarding ${product}.\n\nWe aim ${brandCorePurpose}.`;
   let ctaText = 'Learn More';
 
   switch (templateCategory.toLowerCase()) {
     case 'welcome':
       subject = `Welcome to ${brandName}!`;
       preheader = `Get started with ${product}.`;
-      body = `We're thrilled to have you! Explore how ${product} helps ${targetAudience}.`;
+      body = `We're thrilled to have you! Explore how ${product} helps ${targetAudience.split(',')[0]}.`;
       ctaText = 'Get Started';
       break;
     case 'promotion':
       subject = `Special Offer on ${product}!`;
-      preheader = `Exclusive discounts for ${targetAudience}.`;
+      preheader = `Exclusive discounts for ${targetAudience.split(',')[0]}.`;
       body = `Don't miss our limited-time offer on ${product}. Enhance your workflow today!`;
       ctaText = 'Claim Discount';
       break;
     case 'newsletter':
       subject = `${brandName} Monthly Insights`;
       preheader = `Latest news and tips.`;
-      body = `Here's your monthly update from ${brandName}, covering new features in ${product} and industry news for ${targetAudience}.`;
+      body = `Here's your monthly update from ${brandName}, covering new features in ${product} and industry news for ${targetAudience.split(',')[0]}.`;
       ctaText = 'Read Newsletter';
       break;
     default:
       subject = `A Message from ${brandName} about ${product}`;
       preheader = `Updates and information.`;
-      body = `Stay informed with the latest from ${brandName}. We are dedicated ${corePurpose}.`;
+      body = `Stay informed with the latest from ${brandName}. We are dedicated ${brandCorePurpose}.`;
       ctaText = 'Discover More';
       break;
   }
@@ -146,6 +165,16 @@ function generateMockEmailContent(templateCategory: string, brand: typeof mockBr
 type CampaignType = "standard" | "automation" | "ab_test" | "rss_feed";
 type ScheduleOption = "immediate" | "later";
 type PreviewDevice = "desktop" | "mobile";
+
+// AI Assistant Modal Form Schema
+const aiAssistantFormSchema = z.object({
+  campaignGoal: CampaignGoalZodSchema,
+  keyMessageOrOffer: z.string().min(10, "Must be at least 10 characters").max(500, "Cannot exceed 500 characters"),
+  targetAudienceDescription: z.string().max(300, "Cannot exceed 300 characters").optional(),
+  desiredTone: CampaignToneZodSchema.optional(),
+});
+type AiAssistantFormValues = z.infer<typeof aiAssistantFormSchema>;
+
 
 function CreateCampaignFormComponent() {
   const searchParams = useSearchParams();
@@ -192,6 +221,32 @@ function CreateCampaignFormComponent() {
   const [testEmailAddress, setTestEmailAddress] = useState('');
   const [currentPreviewDevice, setCurrentPreviewDevice] = useState<PreviewDevice>('desktop');
 
+  // AI Assistant State
+  const [isAiAssistantModalOpen, setIsAiAssistantModalOpen] = useState(false);
+  const [aiAssistantStep, setAiAssistantStep] = useState(1);
+  const [aiAssistantSuggestions, setAiAssistantSuggestions] = useState<GenerateCampaignElementsOutput | null>(null);
+  const [isLoadingAiSuggestions, setIsLoadingAiSuggestions] = useState(false);
+  const [aiSuggestionsError, setAiSuggestionsError] = useState<string | null>(null);
+  const [isAiTransitionPending, startAiTransition] = useTransition();
+
+  const [selectedAiCampaignName, setSelectedAiCampaignName] = useState<string>('');
+  const [selectedAiSubjectLine, setSelectedAiSubjectLine] = useState<string>('');
+  const [selectedAiPreviewText, setSelectedAiPreviewText] = useState<string>('');
+  const [editableAiEmailBody, setEditableAiEmailBody] = useState<string>('');
+  const [selectedAiCta, setSelectedAiCta] = useState<string>('');
+
+
+  const aiForm = useForm<AiAssistantFormValues>({
+    resolver: zodResolver(aiAssistantFormSchema),
+    defaultValues: {
+      campaignGoal: CampaignGoalEnum.new_product_feature,
+      keyMessageOrOffer: "",
+      targetAudienceDescription: "",
+      desiredTone: CampaignToneEnum.professional,
+    },
+  });
+
+
   useEffect(() => {
     const templateIdFromQuery = searchParams.get('templateId');
     const campaignNameFromQuery = searchParams.get('campaignName');
@@ -213,7 +268,7 @@ function CreateCampaignFormComponent() {
   const handleTemplateSelect = (template: EmailTemplate, closeModal: boolean = true) => {
     setSelectedTemplateId(template.id);
     setSelectedTemplateName(template.name);
-    const mockContent = generateMockEmailContent(template.category, mockBrand);
+    const mockContent = generateMockEmailContent(template.category, mockBrandProfileForAI);
     setSubjectLine(mockContent.subject);
     setPreviewText(mockContent.preheader || '');
     setEmailContent(`<!-- Selected Template: ${template.name} -->\n${mockContent.greeting ? mockContent.greeting + '\\n\\n' : ''}${mockContent.body}\n\n${mockContent.ctaText ? `CTA: ${mockContent.ctaText}` : ''}`);
@@ -228,8 +283,9 @@ function CreateCampaignFormComponent() {
     setSelectedTemplateId(null);
     setSelectedTemplateName(null);
     setEmailContent('');
-    setSubjectLine('');
-    setPreviewText('');
+    // Optionally clear subject and preview if they were purely from template
+    // setSubjectLine(''); 
+    // setPreviewText('');
     toast({ title: "Template Cleared" });
   };
 
@@ -313,6 +369,55 @@ function CreateCampaignFormComponent() {
         group.name.toLowerCase().includes(audienceSearchTerm.toLowerCase())
     );
 
+  const onAiAssistantFormSubmit = (values: AiAssistantFormValues) => {
+    setIsLoadingAiSuggestions(true);
+    setAiSuggestionsError(null);
+    setAiAssistantSuggestions(null);
+
+    startAiTransition(async () => {
+      const payload: GenerateCampaignElementsInput = {
+        ...values,
+        brandProfile: mockBrandProfileForAI, // Pass mock brand profile
+      };
+      const result = await handleGenerateCampaignElementsAction(payload);
+      if (result.success && result.data) {
+        setAiAssistantSuggestions(result.data);
+        // Pre-fill selection states for step 2
+        setSelectedAiCampaignName(result.data.campaignNameSuggestions[0] || '');
+        setSelectedAiSubjectLine(result.data.subjectLineSuggestions[0] || '');
+        setSelectedAiPreviewText(result.data.previewTextSuggestions[0] || '');
+        setEditableAiEmailBody(result.data.emailBodyDraft || '');
+        setSelectedAiCta(result.data.ctaSuggestions[0] || '');
+        setAiAssistantStep(2);
+      } else {
+        setAiSuggestionsError(typeof result.error === 'string' ? result.error : "Failed to generate AI suggestions.");
+      }
+      setIsLoadingAiSuggestions(false);
+    });
+  };
+  
+  const handleApplyAiSuggestions = () => {
+    setCampaignName(selectedAiCampaignName);
+    setSubjectLine(selectedAiSubjectLine);
+    setPreviewText(selectedAiPreviewText);
+    setEmailContent(editableAiEmailBody);
+    // CTA can be part of the body or used to guide button text later
+    
+    setIsAiAssistantModalOpen(false);
+    setAiAssistantStep(1); // Reset for next time
+    aiForm.reset();
+    setAiAssistantSuggestions(null);
+    toast({ title: "AI Suggestions Applied", description: "Campaign details have been updated with AI suggestions." });
+  };
+
+  const handleCopyAiItem = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: "Copied!", description: "Text copied to clipboard." });
+    }).catch(err => {
+      toast({ title: "Copy Failed", variant: "destructive" });
+    });
+  };
+
   return (
     <MainLayout pageTitle={campaignName ? `Create Campaign: ${campaignName}` : "Create New Email Campaign"}>
       <div className="space-y-6">
@@ -348,7 +453,167 @@ function CreateCampaignFormComponent() {
               <TabsContent value="details">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Campaign Details</CardTitle>
+                    <div className="flex justify-between items-center">
+                        <CardTitle>Campaign Details</CardTitle>
+                        <Dialog open={isAiAssistantModalOpen} onOpenChange={(isOpen) => {
+                            setIsAiAssistantModalOpen(isOpen);
+                            if (!isOpen) { // Reset on close
+                                setAiAssistantStep(1);
+                                aiForm.reset();
+                                setAiAssistantSuggestions(null);
+                            }
+                        }}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline">
+                                    <Sparkles className="mr-2 h-4 w-4 text-primary" /> Get Started with AI
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+                                <DialogHeader>
+                                    <DialogTitle className="flex items-center">
+                                        <Lightbulb className="mr-2 h-5 w-5 text-yellow-400" /> AI Campaign Assistant
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        {aiAssistantStep === 1 ? "Provide some initial details for your campaign." : "Review and apply AI-generated suggestions."}
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <ScrollArea className="flex-grow py-1 pr-3">
+                                  {aiAssistantStep === 1 && (
+                                    <form onSubmit={aiForm.handleSubmit(onAiAssistantFormSubmit)} className="space-y-4">
+                                      <div className="space-y-2">
+                                        <Label htmlFor="aiCampaignGoal">Campaign Goal</Label>
+                                        <Controller
+                                          name="campaignGoal"
+                                          control={aiForm.control}
+                                          render={({ field }) => (
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                              <SelectTrigger id="aiCampaignGoal">
+                                                <SelectValue placeholder="Select campaign goal" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {Object.entries(CampaignGoalEnum).map(([key, value]) => (
+                                                  <SelectItem key={key} value={value}>{value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          )}
+                                        />
+                                        {aiForm.formState.errors.campaignGoal && <p className="text-xs text-destructive">{aiForm.formState.errors.campaignGoal.message}</p>}
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <Label htmlFor="aiKeyMessage">Key Message / Offer</Label>
+                                        <Textarea id="aiKeyMessage" {...aiForm.register("keyMessageOrOffer")} placeholder="e.g., Launching new eco-friendly packaging, 20% off all summer items" rows={3} />
+                                        {aiForm.formState.errors.keyMessageOrOffer && <p className="text-xs text-destructive">{aiForm.formState.errors.keyMessageOrOffer.message}</p>}
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <Label htmlFor="aiTargetAudience">Specific Target Audience (Optional)</Label>
+                                        <Textarea id="aiTargetAudience" {...aiForm.register("targetAudienceDescription")} placeholder="e.g., Existing customers who purchased in the last 6 months, New subscribers interested in sustainable products" rows={2} />
+                                        {aiForm.formState.errors.targetAudienceDescription && <p className="text-xs text-destructive">{aiForm.formState.errors.targetAudienceDescription.message}</p>}
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <Label htmlFor="aiDesiredTone">Desired Tone (Optional)</Label>
+                                         <Controller
+                                          name="desiredTone"
+                                          control={aiForm.control}
+                                          render={({ field }) => (
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                              <SelectTrigger id="aiDesiredTone">
+                                                <SelectValue placeholder="Select desired tone" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {Object.entries(CampaignToneEnum).map(([key, value]) => (
+                                                  <SelectItem key={key} value={value}>{value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          )}
+                                        />
+                                        {aiForm.formState.errors.desiredTone && <p className="text-xs text-destructive">{aiForm.formState.errors.desiredTone.message}</p>}
+                                      </div>
+                                      <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
+                                        <Button type="submit" disabled={isLoadingAiSuggestions || isAiTransitionPending}>
+                                          {isLoadingAiSuggestions || isAiTransitionPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                                          Get AI Suggestions
+                                        </Button>
+                                      </DialogFooter>
+                                    </form>
+                                  )}
+
+                                  {aiAssistantStep === 2 && aiAssistantSuggestions && (
+                                    <div className="space-y-6">
+                                      {aiSuggestionsError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{aiSuggestionsError}</AlertDescription></Alert>}
+                                      
+                                      <div>
+                                        <Label className="font-semibold">Campaign Name Suggestions</Label>
+                                        <RadioGroup value={selectedAiCampaignName} onValueChange={setSelectedAiCampaignName} className="mt-1 space-y-1">
+                                          {aiAssistantSuggestions.campaignNameSuggestions.map((name, idx) => (
+                                            <div key={`cn-${idx}`} className="flex items-center space-x-2 text-sm p-1.5 rounded hover:bg-muted/50">
+                                              <RadioGroupItem value={name} id={`cn-opt-${idx}`} />
+                                              <Label htmlFor={`cn-opt-${idx}`} className="font-normal cursor-pointer flex-grow">{name}</Label>
+                                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyAiItem(name)}><Copy className="h-3.5 w-3.5"/></Button>
+                                            </div>
+                                          ))}
+                                        </RadioGroup>
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="font-semibold">Subject Line Suggestions</Label>
+                                         <RadioGroup value={selectedAiSubjectLine} onValueChange={setSelectedAiSubjectLine} className="mt-1 space-y-1">
+                                          {aiAssistantSuggestions.subjectLineSuggestions.map((subj, idx) => (
+                                            <div key={`sl-${idx}`} className="flex items-center space-x-2 text-sm p-1.5 rounded hover:bg-muted/50">
+                                              <RadioGroupItem value={subj} id={`sl-opt-${idx}`} />
+                                              <Label htmlFor={`sl-opt-${idx}`} className="font-normal cursor-pointer flex-grow">{subj}</Label>
+                                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyAiItem(subj)}><Copy className="h-3.5 w-3.5"/></Button>
+                                            </div>
+                                          ))}
+                                        </RadioGroup>
+                                      </div>
+
+                                      <div>
+                                        <Label className="font-semibold">Preview Text Suggestions</Label>
+                                         <RadioGroup value={selectedAiPreviewText} onValueChange={setSelectedAiPreviewText} className="mt-1 space-y-1">
+                                          {aiAssistantSuggestions.previewTextSuggestions.map((prevT, idx) => (
+                                            <div key={`pt-${idx}`} className="flex items-center space-x-2 text-sm p-1.5 rounded hover:bg-muted/50">
+                                              <RadioGroupItem value={prevT} id={`pt-opt-${idx}`} />
+                                              <Label htmlFor={`pt-opt-${idx}`} className="font-normal cursor-pointer flex-grow">{prevT}</Label>
+                                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyAiItem(prevT)}><Copy className="h-3.5 w-3.5"/></Button>
+                                            </div>
+                                          ))}
+                                        </RadioGroup>
+                                      </div>
+
+                                      <div>
+                                        <Label htmlFor="aiEmailBodyDraft" className="font-semibold">Email Body Draft</Label>
+                                        <Textarea id="aiEmailBodyDraft" value={editableAiEmailBody} onChange={(e) => setEditableAiEmailBody(e.target.value)} rows={8} className="mt-1 text-sm"/>
+                                         <Button variant="ghost" size="sm" className="mt-1 h-7 px-2 text-xs" onClick={() => handleCopyAiItem(editableAiEmailBody)}><Copy className="mr-1 h-3.5 w-3.5"/>Copy Body</Button>
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="font-semibold">Call to Action (CTA) Suggestions</Label>
+                                          <RadioGroup value={selectedAiCta} onValueChange={setSelectedAiCta} className="mt-1 space-y-1">
+                                          {aiAssistantSuggestions.ctaSuggestions.map((cta, idx) => (
+                                            <div key={`cta-${idx}`} className="flex items-center space-x-2 text-sm p-1.5 rounded hover:bg-muted/50">
+                                              <RadioGroupItem value={cta} id={`cta-opt-${idx}`} />
+                                              <Label htmlFor={`cta-opt-${idx}`} className="font-normal cursor-pointer flex-grow">{cta}</Label>
+                                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyAiItem(cta)}><Copy className="h-3.5 w-3.5"/></Button>
+                                            </div>
+                                          ))}
+                                        </RadioGroup>
+                                      </div>
+                                       <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
+                                        <Button variant="outline" onClick={() => setAiAssistantStep(1)}>Back</Button>
+                                        <Button onClick={handleApplyAiSuggestions}>Apply to Campaign Form</Button>
+                                      </DialogFooter>
+                                    </div>
+                                  )}
+                                </ScrollArea>
+                               
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -492,13 +757,14 @@ function CreateCampaignFormComponent() {
                         </Button>
                     </div>
                     <Textarea
-                      placeholder="Compose your email content here... (Rich text / Drag & Drop editor coming soon!)"
+                      id="emailMainContent"
+                      placeholder="Compose your email content here using HTML. Use inline styles for best compatibility across email clients. (Full visual editor coming soon!)"
                       rows={15}
                       value={emailContent}
                       onChange={(e) => setEmailContent(e.target.value)}
-                      className={cn("transition-all duration-300 ease-in-out", currentPreviewDevice === 'mobile' ? 'max-w-xs mx-auto shadow-md border-2 border-dashed p-2' : 'w-full')}
+                      className={cn("transition-all duration-300 ease-in-out font-mono text-xs", currentPreviewDevice === 'mobile' ? 'max-w-xs mx-auto shadow-md border-2 border-dashed p-2' : 'w-full')}
                     />
-                    <Alert variant="default" className="bg-amber-50 border-amber-200 dark:bg-amber-900/30 dark:border-amber-700">
+                     <Alert variant="default" className="bg-amber-50 border-amber-200 dark:bg-amber-900/30 dark:border-amber-700">
                         <MailWarning className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                         <AlertTitle className="text-amber-700 dark:text-amber-300">Important: Email HTML Best Practices</AlertTitle>
                         <AlertDescription className="text-amber-600 dark:text-amber-500 text-xs">
@@ -526,13 +792,6 @@ function CreateCampaignFormComponent() {
                         </Button>
                       </div>
                     </div>
-                     <Alert variant="default" className="bg-background/70">
-                        <Info className="h-4 w-4" />
-                        <AlertTitle>AI Content Assistance</AlertTitle>
-                        <AlertDescription>
-                            Use the main <a href="/ai-assistant" className="underline hover:text-primary">AI Assistant</a> page or the integrated AI tools (coming soon to editor) to generate or refine your email copy.
-                        </AlertDescription>
-                    </Alert>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -800,16 +1059,18 @@ function CreateCampaignFormComponent() {
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="py-4 space-y-4">
-                                <div className="p-4 border rounded-md bg-muted/30 max-h-60 overflow-y-auto text-sm">
+                                <ScrollArea className="max-h-60">
+                                <div className="p-4 border rounded-md bg-muted/30 text-sm">
                                     <p className="font-semibold">Subject: <span className="font-normal">{subjectLine}</span></p>
                                     {enableSubjectABTest && subjectLineB && (
                                         <p className="font-semibold">Subject B: <span className="font-normal">{subjectLineB}</span></p>
                                     )}
                                     <p className="text-xs text-muted-foreground mt-0.5">Preview Text: {previewText || "N/A"}</p>
                                     <Separator className="my-3"/>
-                                    <h4 className="font-medium mb-1 text-xs uppercase text-muted-foreground">Email Content:</h4>
-                                    <div className="whitespace-pre-wrap text-xs leading-relaxed">{emailContent || "No content entered yet."}</div>
+                                    <h4 className="font-medium mb-1 text-xs uppercase text-muted-foreground">Email Content (HTML):</h4>
+                                    <pre className="whitespace-pre-wrap text-xs leading-relaxed bg-background p-2 rounded font-mono max-h-40 overflow-auto">{emailContent || "No content entered yet."}</pre>
                                 </div>
+                                </ScrollArea>
                                 <div className="space-y-2">
                                     <Label htmlFor="testEmailAddress">Send test email to:</Label>
                                     <Input 
@@ -849,5 +1110,3 @@ export default function CreateCampaignPage() {
   );
 }
 
-
-    
