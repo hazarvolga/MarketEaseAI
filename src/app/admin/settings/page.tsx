@@ -131,6 +131,7 @@ const emailServiceProviders: EmailServiceProvider[] = [
   { id: "mailgun", name: "Mailgun", icon: <SendIcon className="h-5 w-5 text-red-600" /> },
   { id: "sendgrid", name: "SendGrid", icon: <SendIcon className="h-5 w-5 text-sky-500" /> },
   { id: "postmark", name: "Postmark", icon: <Mailbox className="h-5 w-5 text-black dark:text-white" /> },
+  { id: "resend", name: "Resend", icon: <SendIcon className="h-5 w-5 text-slate-500" /> },
   { id: "brevo", name: "Brevo (Sendinblue)", icon: <SendIcon className="h-5 w-5 text-teal-500" /> },
   { id: "mailjet", name: "Mailjet", icon: <SendIcon className="h-5 w-5 text-yellow-500" /> },
   { id: "zoho_mail", name: "Zoho Mail", icon: <Mail className="h-5 w-5 text-orange-600" /> },
@@ -497,7 +498,7 @@ export default function SystemConfigurationPage() {
       case "generic_smtp": settingsToLog = { ...settingsToLog, smtpHost, smtpPort, smtpUser, smtpEncryption, smtpPassword: smtpPassword ? '********' : '' }; break;
       case "gmail": case "outlook": settingsToLog = { ...settingsToLog, connectionMethod: "OAuth 2.0 (Simulated)" }; break;
       case "ses": settingsToLog = { ...settingsToLog, sesAccessKey, sesSecretKey: sesSecretKey ? '********' : '', sesRegion, sesVerifiedIdentity }; break;
-      case "mailgun": case "sendgrid": case "postmark": case "brevo": case "mailjet": case "zoho_mail":
+      case "mailgun": case "sendgrid": case "postmark": case "brevo": case "mailjet": case "zoho_mail": case "resend":
         settingsToLog = { ...settingsToLog, apiKey: apiKey ? '********' : '', apiSecret: apiSecret ? '********' : '', sendingDomain };
         break;
     }
@@ -876,7 +877,7 @@ export default function SystemConfigurationPage() {
                   </div>
                 )}
 
-                {["mailgun", "sendgrid", "postmark", "brevo", "mailjet", "zoho_mail"].includes(selectedEmailService) && (
+                {["mailgun", "sendgrid", "postmark", "brevo", "mailjet", "zoho_mail", "resend"].includes(selectedEmailService) && (
                   <div className="space-y-4 p-4 border rounded-md mt-4 animate-in fade-in duration-300">
                     <h4 className="font-medium flex items-center">
                         {React.cloneElement(emailServiceProviders.find(p=>p.id === selectedEmailService)?.icon as React.ReactElement, {className: "h-5 w-5 mr-2"})}
@@ -1139,3 +1140,4 @@ export default function SystemConfigurationPage() {
 
     
 
+    
