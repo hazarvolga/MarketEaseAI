@@ -51,7 +51,7 @@ import {
   TestTube2,
   ListPlus,
   MessageSquare,
-  BookOpen, // Added BookOpen
+  BookOpen,
   Plug,
 } from 'lucide-react';
 import {
@@ -177,7 +177,7 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
       isGroup: true,
       subItems: [
         { href: '/admin/settings', label: 'System Configuration', icon: <SlidersHorizontal className="h-4 w-4" /> },
-        { href: '/admin/team-management', label: 'Team Management', icon: <Users className="h-4 w-4" /> },
+        // Team Management link removed
       ]
     },
   ], []);
@@ -516,5 +516,3 @@ export function MainLayout({ children, pageTitle }: { children: ReactNode; pageT
     </div>
   );
 }
-
-    
