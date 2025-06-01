@@ -71,13 +71,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { EmailTemplate } from '@/lib/email-template-data';
 import { mockTemplates as allMockTemplates } from '@/lib/email-template-data';
 import { handleGenerateCampaignElementsAction } from './actions';
-// Updated import to use the types CampaignGoal and CampaignTone
 import type { GenerateCampaignElementsInput, GenerateCampaignElementsOutput, CampaignGoal, CampaignTone } from '@/ai/flows/generate-campaign-elements';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 
-// Manually define enums based on the flow's Zod schemas since we are not exporting the Zod schemas themselves anymore
 const CampaignGoalEnum = {
   NEW_PRODUCT_FEATURE: "new_product_feature",
   SALE_DISCOUNT: "sale_discount",
@@ -88,8 +86,6 @@ const CampaignGoalEnum = {
   RE_ENGAGEMENT: "re_engagement",
   OTHER: "other",
 } as const;
-type CampaignGoalEnumValues = typeof CampaignGoalEnum[keyof typeof CampaignGoalEnum];
-
 
 const CampaignToneEnum = {
   PROFESSIONAL: "professional",
@@ -100,8 +96,6 @@ const CampaignToneEnum = {
   EMPATHETIC: "empathetic",
   INSPIRATIONAL: "inspirational",
 } as const;
-type CampaignToneEnumValues = typeof CampaignToneEnum[keyof typeof CampaignToneEnum];
-
 
 interface MockRecipientGroup {
   id: string;
@@ -130,7 +124,6 @@ const mockBrandProfileForAI: GenerateCampaignElementsInput['brandProfile'] = {
   keyProductsOrServices: "ArchModeler Pro (BIM & 3D Modeling), StructAnalyse Ultimate (Structural Analysis & Simulation), CollabPlatform (Cloud-based Project Collaboration), RenderWorks (Photorealistic Rendering Engine)",
   uniqueSellingPropositions: "Fully integrated suite reducing data silos; Advanced AI-powered analysis tools for optimal material usage and structural integrity; Intuitive user interface designed by industry professionals; Robust cloud collaboration features."
 };
-
 
 interface MockEmailTextContent {
   subject: string;
@@ -179,11 +172,9 @@ function generateMockEmailContent(templateCategory: string, brand: GenerateCampa
   return { subject, preheader, greeting, body, ctaText };
 }
 
-
 type CampaignType = "standard" | "automation" | "ab_test" | "rss_feed";
 type ScheduleOption = "immediate" | "later";
 type PreviewDevice = "desktop" | "mobile";
-
 
 const aiAssistantFormSchema = z.object({
   campaignGoal: z.nativeEnum(CampaignGoalEnum),
@@ -203,7 +194,6 @@ const aiAssistantFormSchema = z.object({
 
 type AiAssistantFormValues = z.infer<typeof aiAssistantFormSchema>;
 
-
 function CreateCampaignFormComponent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -213,7 +203,6 @@ function CreateCampaignFormComponent() {
   const [selectedTemplateName, setSelectedTemplateName] = useState<string | null>(null);
   const [isTemplateSelectionModalOpen, setIsTemplateSelectionModalOpen] = useState(false);
   const [templateSearchTerm, setTemplateSearchTerm] = useState('');
-
 
   const [subjectLine, setSubjectLine] = useState('');
   const [subjectLineB, setSubjectLineB] = useState('');
@@ -232,7 +221,6 @@ function CreateCampaignFormComponent() {
   const [excludedRecipientGroups, setExcludedRecipientGroups] = useState<string[]>([]);
   const [audienceSearchTerm, setAudienceSearchTerm] = useState('');
 
-
   const [scheduleOption, setScheduleOption] = useState<ScheduleOption>('immediate');
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
   const [scheduleTime, setScheduleTime] = useState('10:00');
@@ -249,7 +237,6 @@ function CreateCampaignFormComponent() {
   const [testEmailAddress, setTestEmailAddress] = useState('');
   const [currentPreviewDevice, setCurrentPreviewDevice] = useState<PreviewDevice>('desktop');
 
-  // AI Assistant State
   const [isAiAssistantModalOpen, setIsAiAssistantModalOpen] = useState(false);
   const [aiAssistantStep, setAiAssistantStep] = useState(1);
   const [aiAssistantSuggestions, setAiAssistantSuggestions] = useState<GenerateCampaignElementsOutput | null>(null);
@@ -263,7 +250,6 @@ function CreateCampaignFormComponent() {
   const [editableAiEmailBody, setEditableAiEmailBody] = useState<string>('');
   const [selectedAiCta, setSelectedAiCta] = useState<string>('');
 
-
   const aiForm = useForm<AiAssistantFormValues>({
     resolver: zodResolver(aiAssistantFormSchema),
     defaultValues: {
@@ -275,7 +261,6 @@ function CreateCampaignFormComponent() {
     },
   });
   const watchedCampaignGoal = aiForm.watch("campaignGoal");
-
 
   useEffect(() => {
     const templateIdFromQuery = searchParams.get('templateId');
@@ -292,8 +277,7 @@ function CreateCampaignFormComponent() {
         handleTemplateSelect(template, false); 
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, enableGoogleAnalytics]); 
+  }, [searchParams, enableGoogleAnalytics]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTemplateSelect = (template: EmailTemplate, closeModal: boolean = true) => {
     setSelectedTemplateId(template.id);
@@ -403,22 +387,23 @@ function CreateCampaignFormComponent() {
 
     startAiTransition(async () => {
       const payload: GenerateCampaignElementsInput = {
-        campaignGoal: values.campaignGoal as CampaignGoal, // Cast to CampaignGoal type
+        campaignGoal: values.campaignGoal as CampaignGoal,
         keyMessageOrOffer: values.keyMessageOrOffer,
         targetAudienceDescription: values.targetAudienceDescription,
-        desiredTone: values.desiredTone as CampaignTone | undefined, // Cast to CampaignTone type
+        desiredTone: values.desiredTone as CampaignTone | undefined,
         brandProfile: mockBrandProfileForAI,
         customCampaignGoalText: values.campaignGoal === CampaignGoalEnum.OTHER ? values.customCampaignGoal : undefined,
       };
       const result = await handleGenerateCampaignElementsAction(payload);
       if (result.success && result.data) {
         setAiAssistantSuggestions(result.data);
+        // Pre-fill selections for step 2
         setSelectedAiCampaignName(result.data.campaignNameSuggestions[0] || '');
         setSelectedAiSubjectLine(result.data.subjectLineSuggestions[0] || '');
         setSelectedAiPreviewText(result.data.previewTextSuggestions[0] || '');
         setEditableAiEmailBody(result.data.emailBodyDraft || '');
         setSelectedAiCta(result.data.ctaSuggestions[0] || '');
-        setAiAssistantStep(2);
+        setAiAssistantStep(2); // Move to step 2
       } else {
         setAiSuggestionsError(typeof result.error === 'string' ? result.error : "Failed to generate AI suggestions.");
       }
@@ -427,15 +412,16 @@ function CreateCampaignFormComponent() {
   };
   
   const handleApplyAiSuggestions = () => {
-    setCampaignName(selectedAiCampaignName);
-    setSubjectLine(selectedAiSubjectLine);
-    setPreviewText(selectedAiPreviewText);
-    setEmailContent(editableAiEmailBody);
+    setCampaignName(selectedAiCampaignName || campaignName);
+    setSubjectLine(selectedAiSubjectLine || subjectLine);
+    setPreviewText(selectedAiPreviewText || previewText);
+    setEmailContent(editableAiEmailBody || emailContent);
     
     setIsAiAssistantModalOpen(false);
     setAiAssistantStep(1); 
     aiForm.reset();
     setAiAssistantSuggestions(null);
+    setAiSuggestionsError(null);
     toast({ title: "AI Suggestions Applied", description: "Campaign details have been updated with AI suggestions." });
   };
 
@@ -447,13 +433,29 @@ function CreateCampaignFormComponent() {
     });
   };
 
+  const openAiAssistantModal = () => {
+    setAiAssistantStep(1);
+    aiForm.reset();
+    setAiAssistantSuggestions(null);
+    setAiSuggestionsError(null);
+    setIsAiAssistantModalOpen(true);
+  };
+
+
   return (
     <MainLayout pageTitle={campaignName ? `Create Campaign: ${campaignName}` : "Create New Email Campaign"}>
       <div className="space-y-6">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl">Campaign Setup</CardTitle>
-            <CardDescription>Define the core details, content, recipients, and tracking for your new email campaign.</CardDescription>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                    <CardTitle className="text-2xl">Campaign Setup</CardTitle>
+                    <CardDescription>Define the core details, content, recipients, and tracking for your new email campaign.</CardDescription>
+                </div>
+                <Button variant="default" size="lg" onClick={openAiAssistantModal} className="w-full sm:w-auto mt-2 sm:mt-0">
+                    <Sparkles className="mr-2 h-5 w-5 text-yellow-300" /> AI Quick Start
+                </Button>
+            </div>
           </CardHeader>
         </Card>
 
@@ -484,16 +486,17 @@ function CreateCampaignFormComponent() {
                   <CardHeader>
                     <div className="flex justify-between items-center">
                         <CardTitle>Campaign Details</CardTitle>
-                        <Dialog open={isAiAssistantModalOpen} onOpenChange={(isOpen) => {
+                         <Dialog open={isAiAssistantModalOpen} onOpenChange={(isOpen) => {
                             setIsAiAssistantModalOpen(isOpen);
                             if (!isOpen) { 
                                 setAiAssistantStep(1);
                                 aiForm.reset();
                                 setAiAssistantSuggestions(null);
+                                setAiSuggestionsError(null);
                             }
                         }}>
                             <DialogTrigger asChild>
-                                <Button variant="outline">
+                                <Button variant="outline" onClick={openAiAssistantModal}>
                                     <Sparkles className="mr-2 h-4 w-4 text-primary" /> Get Started with AI
                                 </Button>
                             </DialogTrigger>
@@ -645,14 +648,13 @@ function CreateCampaignFormComponent() {
                                           ))}
                                         </RadioGroup>
                                       </div>
-                                       <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
-                                        <Button variant="outline" onClick={() => setAiAssistantStep(1)}>Back</Button>
-                                        <Button onClick={handleApplyAiSuggestions}>Apply to Campaign Form</Button>
+                                       <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1 flex-col sm:flex-row gap-2">
+                                        <Button variant="outline" onClick={() => setAiAssistantStep(1)} className="w-full sm:w-auto">Back</Button>
+                                        <Button onClick={handleApplyAiSuggestions} className="w-full sm:w-auto">Apply to Campaign Form</Button>
                                       </DialogFooter>
                                     </div>
                                   )}
                                 </ScrollArea>
-                               
                             </DialogContent>
                         </Dialog>
                     </div>
@@ -1152,3 +1154,4 @@ export default function CreateCampaignPage() {
   );
 }
 
+    
