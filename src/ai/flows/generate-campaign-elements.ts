@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getConfiguredModelIdentifier } from '@/ai/genkit';
 
 // CampaignGoalSchema is not exported directly
 const CampaignGoalSchema = z.enum([
@@ -72,6 +73,7 @@ export async function generateCampaignElements(input: GenerateCampaignElementsIn
 
 const generateCampaignElementsPrompt = ai.definePrompt({
   name: 'generateCampaignElementsPrompt',
+  model: getConfiguredModelIdentifier(),
   input: {schema: GenerateCampaignElementsInputSchema},
   output: {schema: GenerateCampaignElementsOutputSchema},
   prompt: `You are an expert marketing campaign strategist and copywriter for the brand "{{brandProfile.brandName}}".

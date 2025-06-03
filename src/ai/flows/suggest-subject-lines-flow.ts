@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI-powered subject line suggestion for emails.
@@ -9,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getConfiguredModelIdentifier } from '@/ai/genkit';
 
 const SuggestSubjectLinesInputSchemaInternal = z.object({
   subjectBrief: z.string().min(5, "Subject brief must be at least 5 characters.").max(200, "Subject brief cannot exceed 200 characters.").describe("A brief description or keywords for the email subject line."),
@@ -27,6 +29,7 @@ export async function suggestSubjectLines(input: SuggestSubjectLinesInput): Prom
 
 const suggestSubjectLinesPrompt = ai.definePrompt({
   name: 'suggestSubjectLinesPrompt',
+  model: getConfiguredModelIdentifier(),
   input: {schema: SuggestSubjectLinesInputSchemaInternal},
   output: {schema: SuggestSubjectLinesOutputSchemaInternal},
   prompt: `You are an expert email marketing copywriter. Your task is to generate 3-5 compelling and concise email subject line suggestions.

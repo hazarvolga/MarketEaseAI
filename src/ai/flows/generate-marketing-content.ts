@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getConfiguredModelIdentifier } from '@/ai/genkit';
 
 const GenerateMarketingContentInputSchema = z.object({
   brandCorePurpose: z.string().min(10, "Brand's core purpose must be at least 10 characters.").describe("The brand's fundamental reason for existence beyond making money."),
@@ -51,6 +52,7 @@ export async function generateMarketingContent(input: GenerateMarketingContentIn
 
 const generateMarketingContentPrompt = ai.definePrompt({
   name: 'generateMarketingContentPrompt',
+  model: getConfiguredModelIdentifier(),
   input: {schema: GenerateMarketingContentInputSchema},
   output: {schema: GenerateMarketingContentOutputSchema},
   prompt: `You are an AI marketing assistant. Your task is to generate content suggestions based on the following strategic brand briefing.
@@ -138,3 +140,4 @@ const generateMarketingContentFlow = ai.defineFlow(
     return output!;
   }
 );
+

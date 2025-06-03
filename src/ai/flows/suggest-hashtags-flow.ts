@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getConfiguredModelIdentifier } from '@/ai/genkit';
 
 const SuggestHashtagsInputSchemaInternal = z.object({
   postContent: z.string().min(10, "Post content must be at least 10 characters.").describe("The content of the social media post for which to suggest hashtags."),
@@ -27,6 +28,7 @@ export async function suggestHashtags(input: SuggestHashtagsInput): Promise<Sugg
 
 const suggestHashtagsPrompt = ai.definePrompt({
   name: 'suggestHashtagsPrompt',
+  model: getConfiguredModelIdentifier(),
   input: {schema: SuggestHashtagsInputSchemaInternal},
   output: {schema: SuggestHashtagsOutputSchemaInternal},
   prompt: `Analyze the following social media post content and suggest 3 to 7 relevant hashtags.
