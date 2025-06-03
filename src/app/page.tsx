@@ -37,7 +37,8 @@ import {
   LineChart as LineChartIconLucide,
   ListChecks,
   Users,
-  Loader2, // Added Loader2
+  Loader2, 
+  BarChart, // Added for the new demo
 } from 'lucide-react';
 import {
   Select,
@@ -61,14 +62,14 @@ import {
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
-  BarChart as RechartsBarChart,
+  BarChart as RechartsBarChart, // Aliased existing
   Line,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend as RechartsLegend,
+  Tooltip as RechartsTooltip, // Aliased existing
+  Legend as RechartsLegend, // Aliased existing
   Cell,
 } from "recharts";
 import { cn } from "@/lib/utils";
@@ -103,14 +104,13 @@ const allPossibleChannels: SocialChannelUIData[] = [
 
 const LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY = 'marketMaestroDashboardChannels';
 
-// Define metricDetails and initialSocialMetricsPlaceholder outside the component
 const metricDetails: ChartConfig & { [key: string]: { label?: string; plottable?: boolean; icon?: React.ElementType; color?: string; description?: string; } } = {
   followerGrowth: { label: "Follower Growth", plottable: true, color: "hsl(var(--chart-1))", icon: Users2Icon },
   avgEngagementRate: { label: "Avg. Engagement Rate (%)", plottable: true, color: "hsl(var(--chart-2))", icon: TrendingUp },
   postsPublished: { label: "Posts Published", plottable: true, color: "hsl(var(--chart-3))", icon: Edit3 },
   reach: { label: "Reach", plottable: true, color: "hsl(var(--chart-4))", icon: UsersRound },
   impressions: { label: "Impressions", plottable: true, color: "hsl(var(--chart-5))", icon: Eye },
-  ctr: { label: "CTR (%)", plottable: true, color: "var(--color-cyan, hsl(180, 100%, 50%))", icon: ArrowRight }, // Example custom color
+  ctr: { label: "CTR (%)", plottable: true, color: "var(--color-cyan, hsl(180, 100%, 50%))", icon: ArrowRight }, 
   storyPostViews: { label: "Story/Post Views", plottable: true, color: "var(--color-orange, hsl(30, 100%, 50%))", icon: ImageIconLucide },
   profileVisits: { label: "Profile Visits", plottable: true, color: "var(--color-purple, hsl(270, 100%, 50%))", icon: UserCircleLucide },
   audienceGrowthRate: { label: "Audience Growth Rate (%)", plottable: true, color: "var(--color-teal, hsl(160, 100%, 50%))", icon: UserPlus },
@@ -128,12 +128,11 @@ const initialSocialMetricsPlaceholder: Record<string, string | number> = Object.
 
 const plottableMetrics = Object.keys(metricDetails).filter(key => metricDetails[key].plottable);
 
-// Mock data generation functions
 const generateSocialChartData = (timeframe: Timeframe, platformId: string | null = null) => {
-  const points = timeframe === 'last7days' ? 7 : timeframe === 'last30days' ? 4 : 12; // 4 weeks for 30 days, 12 months for 90 (conceptual)
+  const points = timeframe === 'last7days' ? 7 : timeframe === 'last30days' ? 4 : 12; 
   const labelPrefix = timeframe === 'last7days' ? 'Day ' : timeframe === 'last30days' ? 'W' : 'M';
   
-  let platformMultiplier = 1; // Overall
+  let platformMultiplier = 1; 
   if (platformId === 'facebook') platformMultiplier = 0.6;
   else if (platformId === 'instagram') platformMultiplier = 0.8;
   else if (platformId === 'linkedin') platformMultiplier = 0.4;
@@ -147,7 +146,7 @@ const generateSocialChartData = (timeframe: Timeframe, platformId: string | null
       name: `${labelPrefix}${i + 1}`,
       followerGrowth: Math.floor(baseFollowers * (1 + (Math.random() - 0.5) * 0.2)),
       avgEngagementRate: parseFloat(Math.max(0.1, baseEngagement * (1 + (Math.random() - 0.5) * 0.3)).toFixed(1)),
-      postsPublished: Math.floor((Math.random() * 2 + 1) * platformMultiplier * (points === 7 ? 1 : (points === 4 ? 7 : 30 / 12))), // adjust for period
+      postsPublished: Math.floor((Math.random() * 2 + 1) * platformMultiplier * (points === 7 ? 1 : (points === 4 ? 7 : 30 / 12))), 
       reach: Math.floor((Math.random() * 500 + 200) * platformMultiplier),
       impressions: Math.floor((Math.random() * 1000 + 500) * platformMultiplier),
       ctr: parseFloat(Math.max(0.1, (Math.random() * 1 + 0.2) * platformMultiplier).toFixed(1)),
@@ -159,14 +158,12 @@ const generateSocialChartData = (timeframe: Timeframe, platformId: string | null
 };
 
 const generateSocialSummaryMetrics = (timeframe: Timeframe, platformId: string | null = null) => {
-  let platformMultiplier = 1; // Overall
+  let platformMultiplier = 1; 
   if (platformId === 'facebook') platformMultiplier = 0.6;
   else if (platformId === 'instagram') platformMultiplier = 0.8;
   else if (platformId === 'linkedin') platformMultiplier = 0.4;
   else if (platformId === 'twitter') platformMultiplier = 0.5;
   else if (platformId === 'youtube') platformMultiplier = 0.7;
-
-  const timeMultiplier = timeframe === 'last7days' ? 1 : timeframe === 'last30days' ? 4.3 : 12.9; // days / (days per week/month)
 
   return {
     followerGrowth: Math.floor((Math.random() * 100 + 50) * platformMultiplier * (timeframe === 'last7days' ? 0.25 : (timeframe === 'last30days' ? 1 : 3))),
@@ -193,6 +190,14 @@ const generateEmailChartData = (timeframe: Timeframe) => {
     { name: "Bounce Rate", value: parseFloat(baseBounce.toFixed(1)), fill: "hsl(var(--chart-3))" },
   ];
 };
+
+const fixedChartDemoData = [
+  { name: 'Jan', uv: 400, pv: 240 },
+  { name: 'Feb', uv: 300, pv: 139 },
+  { name: 'Mar', uv: 200, pv: 980 },
+  { name: 'Apr', uv: 278, pv: 390 },
+  { name: 'May', uv: 189, pv: 480 },
+];
 
 export default function DashboardPage() {
   const [hasMounted, setHasMounted] = React.useState(false);
@@ -223,14 +228,12 @@ export default function DashboardPage() {
     setHasMounted(true);
   }, []);
 
-  // Load dashboard channel preferences from localStorage
   useEffect(() => {
-    if (hasMounted) { // Ensure this only runs on client
+    if (hasMounted) { 
       const storedPreferenceString = localStorage.getItem(LOCAL_STORAGE_DASHBOARD_CHANNELS_KEY);
       let activeChannelIds: string[] = [];
       if (storedPreferenceString) {
         try {
-          // Assuming stored preference is an array of ConfiguredSocialChannel objects
           const parsedPreferences: Array<{ id: string; status: string }> = JSON.parse(storedPreferenceString);
           if (Array.isArray(parsedPreferences)) {
             activeChannelIds = parsedPreferences
@@ -250,7 +253,6 @@ export default function DashboardPage() {
     }
   }, [hasMounted]);
 
-  // Update Social Performance Card data when filter or timeframe changes
   useEffect(() => {
     if (hasMounted) {
       setDisplayedSocialSummaryMetrics(generateSocialSummaryMetrics(socialTimeframe, selectedSocialChannelId));
@@ -258,7 +260,6 @@ export default function DashboardPage() {
     }
   }, [selectedSocialChannelId, socialTimeframe, hasMounted]);
 
-  // Update Email Marketing Card data when timeframe changes
   useEffect(() => {
     if (hasMounted) {
       const newEmailChartData = generateEmailChartData(emailTimeframe);
@@ -297,7 +298,6 @@ export default function DashboardPage() {
       <div className="space-y-6">
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Social Media Performance Card */}
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -534,7 +534,6 @@ export default function DashboardPage() {
             </CardFooter>
           </Card>
 
-          {/* Email Marketing Insights Card */}
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -739,7 +738,7 @@ export default function DashboardPage() {
             ) : (
                  <Card className="shadow-sm">
                   <CardContent className="py-10 flex flex-col items-center justify-center text-center">
-                  {!hasMounted || !initiallyLoadedLocalStorage ? ( // Show loader if hasMounted is false OR localStorage hasn't confirmed loading
+                  {!hasMounted || !initiallyLoadedLocalStorage ? ( 
                       <>
                           <Loader2 className="h-10 w-10 text-muted-foreground mb-3 animate-spin" />
                           <h3 className="text-md font-semibold">Loading Channel Preferences...</h3>
@@ -757,7 +756,46 @@ export default function DashboardPage() {
               </Card>
             )}
         </div>
+
+        {/* New Card for Demonstrating Fixed Chart Fix */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center"><BarChart className="mr-2 h-6 w-6 text-primary"/>Fixed Dimensions Chart Example</CardTitle>
+            <CardDescription>Demonstrating how to handle charts with fixed dimensions (e.g., 453x220) without `ResponsiveContainer` warnings.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm mb-2">
+              If you use <code>ResponsiveContainer</code> with hardcoded pixel values for width and height, Recharts might suggest you don't need it.
+              The fix is to remove <code>ResponsiveContainer</code> and apply dimensions to a parent <code>div</code>, then pass those dimensions directly to the chart component (e.g., <code>BarChart</code>).
+            </p>
+            <div className="p-4 border rounded-md bg-muted/30">
+              <h4 className="font-semibold mb-2">Chart with Fixed Dimensions (453px x 220px)</h4>
+              <div style={{ width: '453px', height: '220px' }} className="mx-auto bg-background p-2 rounded-md shadow">
+                <RechartsBarChart data={fixedChartDemoData} width={453} height={220} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" fontSize={10} />
+                  <YAxis fontSize={10} />
+                  <RechartsTooltip wrapperStyle={{fontSize: '12px'}}/>
+                  <RechartsLegend wrapperStyle={{fontSize: '10px'}} />
+                  <Bar dataKey="pv" fill="hsl(var(--chart-1))" name="Page Views" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="uv" fill="hsl(var(--chart-2))" name="Unique Visitors" radius={[4, 4, 0, 0]}/>
+                </RechartsBarChart>
+              </div>
+            </div>
+            <Alert variant="default" className="mt-3 bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700 text-xs">
+                <Lightbulb className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-700 dark:text-green-300 text-sm">Note on this Example</AlertTitle>
+                <AlertDescription className="text-green-600 dark:text-green-400">
+                    The chart above is rendered directly within a <code>div</code> styled with fixed dimensions. 
+                    The <code>BarChart</code> component itself receives <code>width={453}</code> and <code>height={220}</code> props.
+                    This avoids the specific warning you mentioned.
+                </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+
       </div>
     </MainLayout>
   );
 }
+
