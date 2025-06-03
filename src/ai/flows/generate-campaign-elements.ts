@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-// Removed export from CampaignGoalSchema
+// CampaignGoalSchema is not exported directly
 const CampaignGoalSchema = z.enum([
   "new_product_feature", 
   "sale_discount", 
@@ -22,9 +22,9 @@ const CampaignGoalSchema = z.enum([
   "re_engagement",
   "other"
 ]).describe("The primary goal of the email campaign.");
-export type CampaignGoal = z.infer<typeof CampaignGoalSchema>; // Exporting the type is fine
+export type CampaignGoal = z.infer<typeof CampaignGoalSchema>; // Exporting the type
 
-// Removed export from CampaignToneSchema
+// CampaignToneSchema is not exported directly
 const CampaignToneSchema = z.enum([
   "professional",
   "friendly",
@@ -34,7 +34,7 @@ const CampaignToneSchema = z.enum([
   "empathetic",
   "inspirational"
 ]).describe("The desired tone of voice for the campaign content.");
-export type CampaignTone = z.infer<typeof CampaignToneSchema>; // Exporting the type is fine
+export type CampaignTone = z.infer<typeof CampaignToneSchema>; // Exporting the type
 
 const GenerateCampaignElementsInputSchema = z.object({
   campaignGoal: CampaignGoalSchema, 
@@ -86,7 +86,13 @@ Your task is to generate key elements for an email campaign based on the provide
 {{#if brandProfile.uniqueSellingPropositions}}- USPs: {{brandProfile.uniqueSellingPropositions}}{{/if}}
 
 **User Input for This Specific Campaign:**
-- Campaign Objective: {{#if (eq campaignGoal "other")}}{{#if customCampaignGoalText}}Custom: {{{customCampaignGoalText}}}{{else}}Other (details in Key Message/Offer){{/if}}{{else}}{{campaignGoal}} (Translate this goal into actionable marketing terms){{/if}}
+- Campaign Objective:
+  {{#if customCampaignGoalText}}
+    User-defined: "{{{customCampaignGoalText}}}" (This is a custom goal because 'other' was selected as the general category for the campaign objective).
+  {{else}}
+    Selected category: "{{campaignGoal}}".
+  {{/if}}
+  (Please use the "Key Message/Offer" below as the primary detail for this objective, and interpret the objective in actionable marketing terms.)
 - Key Message/Offer for this campaign: {{{keyMessageOrOffer}}}
 {{#if targetAudienceDescription}}- Specific Target Audience for this campaign: {{{targetAudienceDescription}}}{{else}}- (Use general brand target audience for this campaign.){{/if}}
 {{#if desiredTone}}- Desired Tone for this campaign: {{desiredTone}}{{else}}- (Use general brand voice for this campaign.)"{{/if}}
@@ -119,8 +125,10 @@ const generateCampaignElementsFlow = ai.defineFlow(
       campaignNameSuggestions: output.campaignNameSuggestions?.length > 0 ? output.campaignNameSuggestions : ["New Campaign Idea"],
       subjectLineSuggestions: output.subjectLineSuggestions?.length > 0 ? output.subjectLineSuggestions : ["Your Compelling Subject"],
       previewTextSuggestions: output.previewTextSuggestions?.length > 0 ? output.previewTextSuggestions : ["Exciting update inside!"],
-      emailBodyDraft: output.emailBodyDraft || "Dear [User Name],\n\nWe have an exciting update for you regarding [Key Message/Offer].\n\n[Further details about the offer or message.]\n\nBest regards,\nThe {{brandProfile.brandName}} Team",
+      emailBodyDraft: output.emailBodyDraft || `Dear [User Name],\n\nWe have an exciting update for you regarding ${input.keyMessageOrOffer}.\n\n[Further details about the offer or message.]\n\nBest regards,\nThe ${input.brandProfile.brandName} Team`,
       ctaSuggestions: output.ctaSuggestions?.length > 0 ? output.ctaSuggestions : ["Learn More"],
     };
   }
 );
+
+    
