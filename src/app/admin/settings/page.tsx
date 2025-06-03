@@ -295,7 +295,7 @@ const integrationPlaceholders: IntegrationPlaceholder[] = [
 export default function SystemConfigurationPage() {
   const [selectedProvider, setSelectedProvider] = React.useState<AiProvider>("gemini");
   const [geminiApiKey, setGeminiApiKey] = React.useState("");
-  const [geminiModelName, setGeminiModelName] = React.useState("gemini-1.5-flash-latest");
+  const [geminiModelName, setGeminiModelName] = React.useState("gemini-1.0-pro"); // Updated default
   const [openRouterApiKey, setOpenRouterApiKey] = React.useState("");
   const [openRouterModelName, setOpenRouterModelName] = React.useState("");
   const [openAiApiKey, setOpenAiApiKey] = React.useState("");
@@ -674,7 +674,7 @@ export default function SystemConfigurationPage() {
                         <Label htmlFor="geminiModelName">Gemini Model Name (Optional)</Label>
                         <Input
                         id="geminiModelName"
-                        placeholder="e.g., gemini-1.5-flash-latest (default)"
+                        placeholder="e.g., gemini-1.0-pro (default)"
                         value={geminiModelName}
                         onChange={(e) => setGeminiModelName(e.target.value)}
                         />

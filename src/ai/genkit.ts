@@ -16,6 +16,9 @@ const openRouterApiKey = process.env.OPENROUTER_API_KEY;
 const openRouterModelString = process.env.OPENROUTER_MODEL_STRING;
 const openRouterBaseUrl = process.env.OPENROUTER_API_BASE_URL;
 
+// Changed default model to 'gemini-1.0-pro'
+const DEFAULT_GEMINI_MODEL = 'gemini-1.0-pro';
+
 if (aiProvider === 'googleai') {
   if (!googleApiKey) {
     console.warn(
@@ -24,13 +27,13 @@ if (aiProvider === 'googleai') {
   }
   console.log(
     `Configuring Genkit with Google AI. Model: ${
-      geminiModelName || 'gemini-pro (default)'
+      geminiModelName || DEFAULT_GEMINI_MODEL
     }`
   );
   genkitInstance = genkit({
     plugins: [googleAI({apiKey: googleApiKey || undefined})],
   });
-  configuredModelId = geminiModelName || 'gemini-pro';
+  configuredModelId = geminiModelName || DEFAULT_GEMINI_MODEL;
 } else if (aiProvider === 'openrouter') {
   if (!openRouterApiKey || !openRouterModelString) {
     console.warn(
@@ -40,13 +43,13 @@ if (aiProvider === 'googleai') {
     if (googleApiKey) {
        console.log(
         `Falling back to Google AI. Model: ${
-          geminiModelName || 'gemini-pro (default)'
+          geminiModelName || DEFAULT_GEMINI_MODEL
         }`
       );
       genkitInstance = genkit({
         plugins: [googleAI({apiKey: googleApiKey})],
       });
-      configuredModelId = geminiModelName || 'gemini-pro';
+      configuredModelId = geminiModelName || DEFAULT_GEMINI_MODEL;
     } else {
       console.error("CRITICAL: No valid AI provider could be configured. OPENROUTER keys missing and no GOOGLE_API_KEY for fallback.");
       // Initialize with no plugins or a dummy plugin to prevent crashes, but AI calls will fail.
@@ -74,13 +77,13 @@ if (aiProvider === 'googleai') {
     if (googleApiKey) {
        console.log(
         `Falling back to Google AI due to missing OpenRouter plugin. Model: ${
-          geminiModelName || 'gemini-pro (default)'
+          geminiModelName || DEFAULT_GEMINI_MODEL
         }`
       );
       genkitInstance = genkit({
         plugins: [googleAI({apiKey: googleApiKey})],
       });
-      configuredModelId = geminiModelName || 'gemini-pro';
+      configuredModelId = geminiModelName || DEFAULT_GEMINI_MODEL;
     } else {
       console.error("CRITICAL: No valid AI provider could be configured for OpenRouter path. OPENROUTER plugin missing and no GOOGLE_API_KEY for fallback.");
       genkitInstance = genkit({ plugins: [] });
@@ -94,7 +97,7 @@ if (aiProvider === 'googleai') {
   genkitInstance = genkit({
     plugins: [googleAI({apiKey: googleApiKey || undefined})],
   });
-  configuredModelId = geminiModelName || 'gemini-pro';
+  configuredModelId = geminiModelName || DEFAULT_GEMINI_MODEL;
 }
 
 export const ai = genkitInstance;
@@ -106,10 +109,7 @@ export const ai = genkitInstance;
 export function getConfiguredModelIdentifier(): string {
   if (!configuredModelId || configuredModelId === "no-model-configured") {
     console.warn("Warning: No specific model seems to be configured, ensure AI_PROVIDER and related keys are set. Defaulting might occur or calls may fail.");
-    // Provide a sensible default if nothing else is configured, or let it be handled by Genkit's internal defaults.
-    // For Google AI, Genkit might pick a default if model isn't specified in call.
-    // For OpenRouter, a model string IS required.
-    return geminiModelName || 'gemini-pro'; // Fallback for safety
+    return geminiModelName || DEFAULT_GEMINI_MODEL; // Fallback for safety
   }
   return configuredModelId;
 }
