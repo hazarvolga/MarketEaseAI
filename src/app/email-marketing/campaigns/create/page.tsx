@@ -62,7 +62,8 @@ import {
   Check, 
   Search,
   Lightbulb,
-  Copy
+  Copy,
+  Edit // Added Edit icon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -86,6 +87,8 @@ const CampaignGoalEnum = {
   RE_ENGAGEMENT: "re_engagement",
   OTHER: "other",
 } as const;
+type CampaignGoalUnion = typeof CampaignGoalEnum[keyof typeof CampaignGoalEnum];
+
 
 const CampaignToneEnum = {
   PROFESSIONAL: "professional",
@@ -96,6 +99,8 @@ const CampaignToneEnum = {
   EMPATHETIC: "empathetic",
   INSPIRATIONAL: "inspirational",
 } as const;
+type CampaignToneUnion = typeof CampaignToneEnum[keyof typeof CampaignToneEnum];
+
 
 interface MockRecipientGroup {
   id: string;
@@ -381,33 +386,38 @@ function CreateCampaignFormComponent() {
     );
 
   const onAiAssistantFormSubmit = (values: AiAssistantFormValues) => {
-    setIsLoadingAiSuggestions(true);
     setAiSuggestionsError(null);
-    setAiAssistantSuggestions(null);
+    setAiAssistantSuggestions(null); 
 
     startAiTransition(async () => {
-      const payload: GenerateCampaignElementsInput = {
-        campaignGoal: values.campaignGoal as CampaignGoal,
-        keyMessageOrOffer: values.keyMessageOrOffer,
-        targetAudienceDescription: values.targetAudienceDescription,
-        desiredTone: values.desiredTone as CampaignTone | undefined,
-        brandProfile: mockBrandProfileForAI,
-        customCampaignGoalText: values.campaignGoal === CampaignGoalEnum.OTHER ? values.customCampaignGoal : undefined,
-      };
-      const result = await handleGenerateCampaignElementsAction(payload);
-      if (result.success && result.data) {
-        setAiAssistantSuggestions(result.data);
-        // Pre-fill selections for step 2
-        setSelectedAiCampaignName(result.data.campaignNameSuggestions[0] || '');
-        setSelectedAiSubjectLine(result.data.subjectLineSuggestions[0] || '');
-        setSelectedAiPreviewText(result.data.previewTextSuggestions[0] || '');
-        setEditableAiEmailBody(result.data.emailBodyDraft || '');
-        setSelectedAiCta(result.data.ctaSuggestions[0] || '');
-        setAiAssistantStep(2); // Move to step 2
-      } else {
-        setAiSuggestionsError(typeof result.error === 'string' ? result.error : "Failed to generate AI suggestions.");
+      setIsLoadingAiSuggestions(true); 
+      try {
+        const payload: GenerateCampaignElementsInput = {
+          campaignGoal: values.campaignGoal as CampaignGoal,
+          keyMessageOrOffer: values.keyMessageOrOffer,
+          targetAudienceDescription: values.targetAudienceDescription,
+          desiredTone: values.desiredTone as CampaignTone | undefined,
+          brandProfile: mockBrandProfileForAI,
+          customCampaignGoalText: values.campaignGoal === CampaignGoalEnum.OTHER ? values.customCampaignGoal : undefined,
+        };
+        const result = await handleGenerateCampaignElementsAction(payload);
+        if (result.success && result.data) {
+          setAiAssistantSuggestions(result.data);
+          setSelectedAiCampaignName(result.data.campaignNameSuggestions[0] || '');
+          setSelectedAiSubjectLine(result.data.subjectLineSuggestions[0] || '');
+          setSelectedAiPreviewText(result.data.previewTextSuggestions[0] || '');
+          setEditableAiEmailBody(result.data.emailBodyDraft || '');
+          setSelectedAiCta(result.data.ctaSuggestions[0] || '');
+          setAiAssistantStep(2); 
+        } else {
+          setAiSuggestionsError(typeof result.error === 'string' ? result.error : "Failed to generate AI suggestions.");
+        }
+      } catch (err) {
+        console.error("Error during AI suggestion fetching or processing:", err);
+        setAiSuggestionsError("An unexpected critical error occurred.");
+      } finally {
+        setIsLoadingAiSuggestions(false); 
       }
-      setIsLoadingAiSuggestions(false);
     });
   };
   
@@ -422,6 +432,7 @@ function CreateCampaignFormComponent() {
     aiForm.reset();
     setAiAssistantSuggestions(null);
     setAiSuggestionsError(null);
+    setIsLoadingAiSuggestions(false);
     toast({ title: "AI Suggestions Applied", description: "Campaign details have been updated with AI suggestions." });
   };
 
@@ -438,6 +449,7 @@ function CreateCampaignFormComponent() {
     aiForm.reset();
     setAiAssistantSuggestions(null);
     setAiSuggestionsError(null);
+    setIsLoadingAiSuggestions(false);
     setIsAiAssistantModalOpen(true);
   };
 
@@ -493,6 +505,7 @@ function CreateCampaignFormComponent() {
                                 aiForm.reset();
                                 setAiAssistantSuggestions(null);
                                 setAiSuggestionsError(null);
+                                setIsLoadingAiSuggestions(false); 
                             }
                         }}>
                             <DialogTrigger asChild>
@@ -578,6 +591,13 @@ function CreateCampaignFormComponent() {
                                         />
                                         {aiForm.formState.errors.desiredTone && <p className="text-xs text-destructive">{aiForm.formState.errors.desiredTone.message}</p>}
                                       </div>
+                                      {aiSuggestionsError && (
+                                        <Alert variant="destructive" className="mt-2">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Error</AlertTitle>
+                                            <AlertDescription>{aiSuggestionsError}</AlertDescription>
+                                        </Alert>
+                                       )}
                                       <DialogFooter className="pt-4 sticky bottom-0 bg-background pb-1">
                                         <Button type="submit" disabled={isLoadingAiSuggestions || isAiTransitionPending}>
                                           {isLoadingAiSuggestions || isAiTransitionPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
