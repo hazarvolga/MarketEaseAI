@@ -770,17 +770,23 @@ export default function DashboardPage() {
             </p>
             <div className="p-4 border rounded-md bg-muted/30">
               <h4 className="font-semibold mb-2">Chart with Fixed Dimensions (453px x 220px)</h4>
-              <div style={{ width: '453px', height: '220px' }} className="mx-auto bg-background p-2 rounded-md shadow">
-                <RechartsBarChart data={fixedChartDemoData} width={453} height={220} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" fontSize={10} />
-                  <YAxis fontSize={10} />
-                  <RechartsTooltip wrapperStyle={{fontSize: '12px'}}/>
-                  <RechartsLegend wrapperStyle={{fontSize: '10px'}} />
-                  <Bar dataKey="pv" fill="hsl(var(--chart-1))" name="Page Views" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="uv" fill="hsl(var(--chart-2))" name="Unique Visitors" radius={[4, 4, 0, 0]}/>
-                </RechartsBarChart>
-              </div>
+              {hasMounted ? (
+                <div style={{ width: '453px', height: '220px' }} className="mx-auto bg-background p-2 rounded-md shadow">
+                  <RechartsBarChart data={fixedChartDemoData} width={453} height={220} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" fontSize={10} />
+                    <YAxis fontSize={10} />
+                    <RechartsTooltip wrapperStyle={{fontSize: '12px'}}/>
+                    <RechartsLegend wrapperStyle={{fontSize: '10px'}} />
+                    <Bar dataKey="pv" fill="hsl(var(--chart-1))" name="Page Views" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="uv" fill="hsl(var(--chart-2))" name="Unique Visitors" radius={[4, 4, 0, 0]}/>
+                  </RechartsBarChart>
+                </div>
+              ) : (
+                <div style={{ width: '453px', height: '220px' }} className="mx-auto bg-background p-2 rounded-md shadow flex items-center justify-center">
+                  <Skeleton className="h-full w-full" />
+                </div>
+              )}
             </div>
             <Alert variant="default" className="mt-3 bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700 text-xs">
                 <Lightbulb className="h-4 w-4 text-green-600" />
