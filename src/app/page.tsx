@@ -38,7 +38,7 @@ import {
   ListChecks,
   Users,
   Loader2, 
-  BarChart, // Added for the new demo
+  BarChart, 
 } from 'lucide-react';
 import {
   Select,
@@ -62,14 +62,14 @@ import {
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
-  BarChart as RechartsBarChart, // Aliased existing
+  BarChart as RechartsBarChart, 
   Line,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip, // Aliased existing
-  Legend as RechartsLegend, // Aliased existing
+  Tooltip as RechartsTooltip, 
+  Legend as RechartsLegend, 
   Cell,
 } from "recharts";
 import { cn } from "@/lib/utils";
@@ -78,6 +78,7 @@ import { Progress } from '@/components/ui/progress';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from '@/components/ui/skeleton';
+import dynamic from 'next/dynamic';
 
 
 type Timeframe = 'last7days' | 'last30days' | 'last90days';
@@ -191,13 +192,17 @@ const generateEmailChartData = (timeframe: Timeframe) => {
   ];
 };
 
-const fixedChartDemoData = [
-  { name: 'Jan', uv: 400, pv: 240 },
-  { name: 'Feb', uv: 300, pv: 139 },
-  { name: 'Mar', uv: 200, pv: 980 },
-  { name: 'Apr', uv: 278, pv: 390 },
-  { name: 'May', uv: 189, pv: 480 },
-];
+const DynamicFixedDimensionsChart = dynamic(
+  () => import('@/components/charts/FixedDimensionsDemoChart'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div style={{ width: '453px', height: '220px' }} className="mx-auto bg-background p-2 rounded-md shadow flex items-center justify-center">
+        <Skeleton className="h-full w-full" />
+      </div>
+    )
+  }
+);
 
 export default function DashboardPage() {
   const [hasMounted, setHasMounted] = React.useState(false);
@@ -756,8 +761,7 @@ export default function DashboardPage() {
               </Card>
             )}
         </div>
-
-        {/* New Card for Demonstrating Fixed Chart Fix */}
+        
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl flex items-center"><BarChart className="mr-2 h-6 w-6 text-primary"/>Fixed Dimensions Chart Example</CardTitle>
@@ -767,34 +771,19 @@ export default function DashboardPage() {
             <p className="text-sm mb-2">
               If you use <code>ResponsiveContainer</code> with hardcoded pixel values for width and height, Recharts might suggest you don't need it.
               The fix is to remove <code>ResponsiveContainer</code> and apply dimensions to a parent <code>div</code>, then pass those dimensions directly to the chart component (e.g., <code>BarChart</code>).
+              Alternatively, use <code>next/dynamic</code> with <code>ssr: false</code> to ensure the chart only renders on the client.
             </p>
             <div className="p-4 border rounded-md bg-muted/30">
               <h4 className="font-semibold mb-2">Chart with Fixed Dimensions (453px x 220px)</h4>
-              {hasMounted ? (
-                <div style={{ width: '453px', height: '220px' }} className="mx-auto bg-background p-2 rounded-md shadow">
-                  <RechartsBarChart data={fixedChartDemoData} width={453} height={220} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" fontSize={10} />
-                    <YAxis fontSize={10} />
-                    <RechartsTooltip wrapperStyle={{fontSize: '12px'}}/>
-                    <RechartsLegend wrapperStyle={{fontSize: '10px'}} />
-                    <Bar dataKey="pv" fill="hsl(var(--chart-1))" name="Page Views" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="uv" fill="hsl(var(--chart-2))" name="Unique Visitors" radius={[4, 4, 0, 0]}/>
-                  </RechartsBarChart>
-                </div>
-              ) : (
-                <div style={{ width: '453px', height: '220px' }} className="mx-auto bg-background p-2 rounded-md shadow flex items-center justify-center">
-                  <Skeleton className="h-full w-full" />
-                </div>
-              )}
+              <DynamicFixedDimensionsChart width={453} height={220} />
             </div>
             <Alert variant="default" className="mt-3 bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700 text-xs">
                 <Lightbulb className="h-4 w-4 text-green-600" />
                 <AlertTitle className="text-green-700 dark:text-green-300 text-sm">Note on this Example</AlertTitle>
                 <AlertDescription className="text-green-600 dark:text-green-400">
-                    The chart above is rendered directly within a <code>div</code> styled with fixed dimensions. 
-                    The <code>BarChart</code> component itself receives <code>width={453}</code> and <code>height={220}</code> props.
-                    This avoids the specific warning you mentioned.
+                    The chart above is now rendered using <code>next/dynamic</code> with <code>ssr: false</code>, 
+                    encapsulated in its own component (<code>FixedDimensionsDemoChart.tsx</code>). 
+                    This is a robust way to prevent hydration errors with Recharts.
                 </AlertDescription>
             </Alert>
           </CardContent>
@@ -804,4 +793,3 @@ export default function DashboardPage() {
     </MainLayout>
   );
 }
-
